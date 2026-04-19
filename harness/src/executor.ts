@@ -90,6 +90,64 @@ export class StepExecutor {
     console.log(`${"=".repeat(60)}`);
   }
 
+  // --- 진행 상태 테이블 ---
+
+  private printProgressTable(): void {
+    const index = this.readMutable();
+    const steps = index.steps;
+
+    // 컬럼 너비 계산
+    const nameWidth = Math.max(4, ...steps.map((s) => s.name.length));
+    const statusWidth = 9; // "🔄 진행 중" 등 (이모지 폭 보정)
+    const summaryWidth = 50;
+
+    const pad = (str: string, width: number) => {
+      // 이모지/한글 폭 보정: 이모지 1개=2칸, 한글 1자=2칸
+      const displayWidth = [...str].reduce((w, ch) => {
+        const code = ch.codePointAt(0) ?? 0;
+        if (code > 0x1f000) return w + 2; // 이모지
+        if ((code >= 0xac00 && code <= 0xd7a3) || (code >= 0x3000 && code <= 0x9fff)) return w + 2; // 한글/CJK
+        return w + 1;
+      }, 0);
+      return str + " ".repeat(Math.max(0, width - displayWidth));
+    };
+
+    const getStatus = (s: { status: string; started_at?: string }): string => {
+      if (s.status === "completed") return "✅ 완료";
+      if (s.status === "error") return "❌ 실패";
+      if (s.status === "blocked") return "⏸ 차단";
+      if (s.started_at) return "🔄 진행 중";
+      return "⏳ 대기";
+    };
+
+    const getSummary = (s: { summary?: string }): string => {
+      const summary = s.summary ?? "";
+      if (summary.length <= summaryWidth) return summary;
+      return summary.slice(0, summaryWidth - 1) + "…";
+    };
+
+    const hr = (left: string, mid: string, right: string, fill = "─") =>
+      `${left}${fill.repeat(6)}${mid}${fill.repeat(nameWidth + 2)}${mid}${fill.repeat(statusWidth + 2)}${mid}${fill.repeat(summaryWidth + 2)}${right}`;
+
+    const row = (step: string, name: string, status: string, summary: string) =>
+      `│ ${pad(step, 4)} │ ${pad(name, nameWidth)} │ ${pad(status, statusWidth)} │ ${pad(summary, summaryWidth)} │`;
+
+    console.log("");
+    console.log(hr("┌", "┬", "┐"));
+    console.log(row("Step", "Name", "상태", "Summary"));
+    console.log(hr("├", "┼", "┤"));
+    for (const s of steps) {
+      console.log(row(
+        String(s.step),
+        s.name,
+        getStatus(s),
+        getSummary(s),
+      ));
+    }
+    console.log(hr("└", "┴", "┘"));
+    console.log("");
+  }
+
   // --- blocker 체크 ---
 
   checkBlockers(): void {
@@ -247,6 +305,7 @@ export class StepExecutor {
           stepName,
         });
         console.log(`  ✓ Step ${stepNum}: ${stepName} [${elapsedSec}s]`);
+        this.printProgressTable();
         return true;
       }
 
@@ -262,6 +321,7 @@ export class StepExecutor {
 
         console.log(`  ⏸ Step ${stepNum}: ${stepName} blocked [${elapsedSec}s]`);
         console.log(`    Reason: ${currentStep.blocked_reason}`);
+        this.printProgressTable();
         this.updateTopIndex("blocked");
         process.exit(2);
       }
@@ -313,6 +373,7 @@ export class StepExecutor {
         });
         console.log(`  ✗ Step ${stepNum}: ${stepName} failed after ${MAX_RETRIES} attempts [${elapsedSec}s]`);
         console.log(`    Error: ${errMsg}`);
+        this.printProgressTable();
         this.updateTopIndex("error");
         process.exit(1);
       }
@@ -340,6 +401,7 @@ export class StepExecutor {
         writeJson(this.indexFile, mutable);
       }
 
+      this.printProgressTable();
       await this.executeSingleStep(pending, guardrails);
     }
   }

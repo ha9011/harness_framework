@@ -16,11 +16,14 @@ export async function withProgress<T>(
 ): Promise<ProgressResult<T>> {
   const t0 = performance.now();
   let idx = 0;
+  let lastLineLen = 0;
 
   const timer = setInterval(() => {
     const sec = Math.floor((performance.now() - t0) / 1000);
     const frame = FRAMES[idx % FRAMES.length];
-    process.stderr.write(`\r${frame} ${label} [${sec}s]`);
+    const line = `${frame} ${label} [${sec}s]`;
+    lastLineLen = Math.max(lastLineLen, line.length);
+    process.stdout.write(`\r${line}`);
     idx++;
   }, FRAME_INTERVAL_MS);
 
@@ -30,7 +33,8 @@ export async function withProgress<T>(
     return { result, elapsed };
   } finally {
     clearInterval(timer);
-    // 라인 지우기
-    process.stderr.write("\r" + " ".repeat(label.length + 20) + "\r");
+    // 라인 지우기 — 마지막으로 쓴 줄 길이 + 여유분으로 확실히 덮기
+    const clearLen = Math.max(lastLineLen + 10, 120);
+    process.stdout.write("\r" + " ".repeat(clearLen) + "\r");
   }
 }
