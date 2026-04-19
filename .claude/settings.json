@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npm run lint 2>&1 && npm run build 2>&1 && npm run test 2>&1"
+            "command": "cd \"$(git rev-parse --show-toplevel)/harness\" && npm run --if-present lint 2>&1 && npm run --if-present build 2>&1 && npm run --if-present test 2>&1"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'rm\\s+-rf|git\\s+push\\s+--force|git\\s+reset\\s+--hard|DROP\\s+TABLE'; then echo 'BLOCKED: 위험한 명령어가 감지되었습니다.' >&2; exit 1; fi"
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qiE 'rm\\s+(-[a-z]*r[a-z]*\\s+)*-[a-z]*f|rm\\s+(-[a-z]*f[a-z]*\\s+)*-[a-z]*r|git\\s+push\\s+.*--force|git\\s+push\\s+.*-f|git\\s+reset\\s+.*--hard|drop\\s+table'; then echo 'BLOCKED: 위험한 명령어가 감지되었습니다.' >&2; exit 1; fi"
           }
         ]
       }

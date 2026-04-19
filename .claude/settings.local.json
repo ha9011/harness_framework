@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest:*)",
+      "Bash(rm /Users/hadong/Desktop/study/claude/harness_t1/.claude/commands/harness.md /Users/hadong/Desktop/study/claude/harness_t1/.claude/commands/review.md)",
+      "Bash(rmdir /Users/hadong/Desktop/study/claude/harness_t1/.claude/commands)",
+      "Bash(ls:*)",
+      "Bash(npm run:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(sh -c 'echo \"$CLAUDE_TOOL_INPUT\" | grep -qE \"rm\\\\\\\\s+-rf\" && echo \"CAUGHT\" || echo \"MISSED\"')",
+      "Bash(sh -c 'echo \"$CLAUDE_TOOL_INPUT\" | grep -qE \"git\\\\\\\\s+push\\\\\\\\s+--force\" && echo \"CAUGHT\" || echo \"MISSED\"')",
+      "Bash(npm test:*)",
+      "Bash(afplay:*)",
+      "Bash(claude hooks:*)",
+      "Bash(claude --print-hooks)",
+      "Bash(claude config:*)",
+      "Bash(wc:*)",
+      "Bash(gh auth:*)",
+      "Bash(git remote:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)"
+    ]
+  }
+}

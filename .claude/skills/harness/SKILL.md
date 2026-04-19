@@ -1,3 +1,8 @@
+---
+name: harness
+description: 이 프로젝트는 Harness 프레임워크를 사용한다. 아래 워크플로우에 따라 작업을 진행하라.
+---
+
 이 프로젝트는 Harness 프레임워크를 사용한다. 아래 워크플로우에 따라 작업을 진행하라.
 
 ---
@@ -46,8 +51,8 @@
 ```
 
 - `dir`: task 디렉토리명.
-- `status`: `"pending"` | `"completed"` | `"error"` | `"blocked"`. execute.py가 실행 중 자동으로 업데이트한다.
-- 타임스탬프(`completed_at`, `failed_at`, `blocked_at`)는 execute.py가 상태 변경 시 자동 기록한다. 생성 시 넣지 않는다.
+- `status`: `"pending"` | `"completed"` | `"error"` | `"blocked"`. executor가 실행 중 자동으로 업데이트한다.
+- 타임스탬프(`completed_at`, `failed_at`, `blocked_at`)는 executor가 상태 변경 시 자동 기록한다. 생성 시 넣지 않는다.
 
 #### D-2. `phases/{task-name}/index.json` (task 상세)
 
@@ -75,13 +80,13 @@
 
 | 전이 | 기록되는 필드 | 기록 주체 |
 |------|-------------|----------|
-| → `completed` | `completed_at`, `summary` | Claude 세션 (summary), execute.py (timestamp) |
-| → `error` | `failed_at`, `error_message` | Claude 세션 (message), execute.py (timestamp) |
-| → `blocked` | `blocked_at`, `blocked_reason` | Claude 세션 (reason), execute.py (timestamp) |
+| → `completed` | `completed_at`, `summary` | Claude 세션 (summary), executor (timestamp) |
+| → `error` | `failed_at`, `error_message` | Claude 세션 (message), executor (timestamp) |
+| → `blocked` | `blocked_at`, `blocked_reason` | Claude 세션 (reason), executor (timestamp) |
 
-`summary`는 step 완료 시 산출물을 한 줄로 요약한 것으로, execute.py가 다음 step 프롬프트에 컨텍스트로 누적 전달한다. 따라서 다음 step에 유용한 정보(생성된 파일, 핵심 결정 등)를 담아야 한다.
+`summary`는 step 완료 시 산출물을 한 줄로 요약한 것으로, executor가 다음 step 프롬프트에 컨텍스트로 누적 전달한다. 따라서 다음 step에 유용한 정보(생성된 파일, 핵심 결정 등)를 담아야 한다.
 
-`created_at`은 execute.py가 최초 실행 시 task 레벨에 한 번만 기록한다. step 레벨의 `started_at`도 execute.py가 각 step 시작 시 자동 기록한다. 생성 시 넣지 않는다.
+`created_at`은 executor가 최초 실행 시 task 레벨에 한 번만 기록한다. step 레벨의 `started_at`도 executor가 각 step 시작 시 자동 기록한다. 생성 시 넣지 않는다.
 
 #### D-3. `phases/{task-name}/step{N}.md` (각 step마다 1개)
 
@@ -127,16 +132,18 @@ npm test        # 테스트 통과
 
 - {이 step에서 하지 말아야 할 것. "X를 하지 마라. 이유: Y" 형식}
 - 기존 테스트를 깨뜨리지 마라
+- 작업 완료 후 직접 Git 커밋을 하지 마라. 하네스가 자동으로 처리한다.
 ```
 
 ### E. 실행
 
 ```bash
-python3 scripts/execute.py {task-name}        # 순차 실행
-python3 scripts/execute.py {task-name} --push  # 실행 후 push
+cd harness && npx tsx src/cli.ts {task-name}              # 순차 실행
+cd harness && npx tsx src/cli.ts {task-name} --push       # 실행 후 push
+cd harness && npx tsx src/cli.ts {task-name} --dry-run    # 프롬프트만 확인
 ```
 
-execute.py가 자동으로 처리하는 것:
+executor가 자동으로 처리하는 것:
 
 - `feat-{task-name}` 브랜치 생성/checkout
 - 가드레일 주입 — CLAUDE.md + docs/*.md 내용을 매 step 프롬프트에 포함
@@ -144,6 +151,7 @@ execute.py가 자동으로 처리하는 것:
 - 자가 교정 — 실패 시 최대 3회 재시도하며, 이전 에러 메시지를 프롬프트에 피드백
 - 2단계 커밋 — 코드 변경(`feat`)과 메타데이터(`chore`)를 분리 커밋
 - 타임스탬프 — started_at, completed_at, failed_at, blocked_at 자동 기록
+- Zod 스키마 검증 — index.json, step output 등의 구조를 런타임에서 검증
 
 에러 복구:
 
