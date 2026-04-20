@@ -9,6 +9,26 @@ description: 이 프로젝트는 Harness 프레임워크를 사용한다. 아래
 
 ## 워크플로우
 
+### 0. 설계 문서 준비
+
+사용자가 요구사항을 전달하면 아래 문서를 채운다.
+
+**프로젝트 전체 문서 (누적/업데이트):**
+- `CLAUDE.md` — 프로젝트 규칙, 기술 스택, 아키텍처 규칙
+- `docs/PRD.md` — 요구사항 (목표, 사용자, 핵심 기능)
+- `docs/ARCHITECTURE.md` — 디렉토리 구조, 패턴, 데이터 흐름
+- `docs/ADR.md` — 기술 결정 이력 (왜 이 기술을 선택했는지)
+
+**현재 작업 계획 (작업 단위로 교체):**
+- `docs/PLAN.md` — 이번 작업의 구현 계획
+  - 작업 목표 (한 줄)
+  - 구현할 기능 목록
+  - 기술적 제약사항
+  - Phase/Step 초안
+  - 미결 사항
+
+이미 `docs/PLAN.md`가 있으면 사용자에게 덮어쓸지 확인한다.
+
 ### A. 탐색
 
 `/docs/` 하위 문서(PRD, ARCHITECTURE, ADR 등)를 읽고 프로젝트의 기획·아키텍처·설계 의도를 파악한다. 필요시 Explore 에이전트를 병렬로 사용한다.
@@ -157,3 +177,14 @@ executor가 자동으로 처리하는 것:
 
 - **error 발생 시**: `phases/{task-name}/index.json`에서 해당 step의 `status`를 `"pending"`으로 바꾸고 `error_message`를 삭제한 뒤 재실행한다.
 - **blocked 발생 시**: `blocked_reason`에 적힌 사유를 해결한 뒤, `status`를 `"pending"`으로 바꾸고 `blocked_reason`을 삭제한 뒤 재실행한다.
+
+### F. 완료 후 아카이브
+
+모든 step이 완료되면 `docs/PLAN.md`를 아카이브한다.
+
+1. `docs/archive/` 디렉토리가 없으면 생성한다.
+2. `docs/PLAN.md` → `docs/archive/PLAN_{날짜}_{task-name}.md`로 이동한다.
+   예: `docs/archive/PLAN_2026-04-20_0-mvp.md`
+3. 사용자에게 "PLAN을 아카이브했습니다"라고 알린다.
+
+※ PRD.md, ARCHITECTURE.md, ADR.md는 이동하지 않는다 (프로젝트 전체 문서).
