@@ -104,9 +104,8 @@ export class GitClient {
     const indexRel = `phases/${phaseDir}/index.json`;
 
     // 1단계: 코드 변경 커밋 (output, index 제외)
-    await this.run("add", "-A");
-    await this.run("reset", "HEAD", "--", outputRel);
-    await this.run("reset", "HEAD", "--", indexRel);
+    // phases/ 와 docs/ 이외의 프로젝트 파일만 스테이징
+    await this.run("add", "-A", "--", ".", `:!${outputRel}`, `:!${indexRel}`);
 
     if ((await this.run("diff", "--cached", "--quiet")).returncode !== 0) {
       const msg = `feat(${phaseName}): step ${stepNum} — ${stepName}`;
@@ -118,8 +117,8 @@ export class GitClient {
       }
     }
 
-    // 2단계: 메타데이터 커밋
-    await this.run("add", "-A");
+    // 2단계: 메타데이터 커밋 (output, index만 스테이징)
+    await this.run("add", outputRel, indexRel);
     if ((await this.run("diff", "--cached", "--quiet")).returncode !== 0) {
       const msg = `chore(${phaseName}): step ${stepNum} output`;
       const r = await this.run("commit", "-m", msg);

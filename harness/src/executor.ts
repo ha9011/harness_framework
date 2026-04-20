@@ -216,11 +216,16 @@ export class StepExecutor {
       }
       writeJson(this.indexFile, data);
     } catch {
-      // JSON 자체가 깨진 경우 — 생성자에서 읽은 원본으로 복원
-      const index = { project: this.project, phase: this.phaseName, steps: [] as Record<string, unknown>[] };
-      for (let i = 0; i < this.total; i++) {
-        index.steps.push({ step: i, name: `step-${i}`, status: i === stepNum ? "pending" : "pending" });
-      }
+      // JSON 자체가 깨진 경우 — 생성자에서 읽은 원본 정보로 최소 구조 재생성
+      const index = {
+        project: this.project,
+        phase: this.phaseName,
+        steps: Array.from({ length: this.total }, (_, i) => ({
+          step: i,
+          name: `step-${i}`,
+          status: i === stepNum ? "pending" as const : "pending" as const,
+        })),
+      };
       writeJson(this.indexFile, index);
       console.log(`  WARN: index.json이 심각하게 손상되어 최소 구조로 복원했습니다.`);
     }
@@ -348,17 +353,19 @@ export class StepExecutor {
           : "Step did not update status";
 
       if (attempt < MAX_RETRIES) {
-        // 재시도를 위해 index.json을 pending으로 복원
+        // FSM retry 전이를 통해 pending으로 복원
         try {
           const mutable = this.readMutable();
           const mStep = mutable.steps.find((s) => s.step === stepNum);
           if (mStep) {
+            const fsm = new StepFSM(mStep.status as "error" | "blocked");
+            fsm.transition("retry");
             mStep.status = "pending";
             delete mStep.error_message;
           }
           writeJson(this.indexFile, mutable);
         } catch {
-          // MutablePhaseIndexSchema로도 파싱 불가 시 원본 복원
+          // FSM 전이 또는 파싱 불가 시 원본 복원
           this.restoreStepToPending(stepNum);
         }
         prevError = errMsg;
@@ -457,8 +464,8 @@ export class StepExecutor {
     writeJson(this.indexFile, mutable);
     this.updateTopIndex("completed");
 
-    // 최종 커밋
-    await this.git.run("add", "-A");
+    // 최종 커밋 — phases/ 디렉토리만 스테이징
+    await this.git.run("add", this.phaseDir);
     if ((await this.git.run("diff", "--cached", "--quiet")).returncode !== 0) {
       const msg = `chore(${this.phaseName}): mark phase completed`;
       const r = await this.git.run("commit", "-m", msg);
