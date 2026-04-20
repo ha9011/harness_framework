@@ -1,3 +1,12 @@
+/**
+ * @file git.ts
+ * @description
+ *   Git 명령어를 대신 실행해주는 "도우미".
+ *   브랜치 생성/전환, 코드 커밋, 원격 저장소 푸시 등을 담당한다.
+ *   스텝이 완료될 때마다 자동으로 커밋을 만들어준다.
+ *
+ * @see executor.ts - 스텝 완료 시 이 파일의 GitClient로 커밋/푸시한다
+ */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 

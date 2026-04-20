@@ -1,3 +1,14 @@
+/**
+ * @file guardrails.ts
+ * @description
+ *   CLAUDE.md와 docs/ 폴더에서 프로젝트 규칙을 읽어오는 "규칙서 전달자".
+ *   읽어온 규칙 + 이전 스텝 요약 + 현재 스텝 정보를 조합해서
+ *   Claude에게 보낼 프롬프트(지시문)를 완성한다.
+ *   쉽게 말해, Claude에게 "이 규칙 지키면서 이 일 해줘"라고 말해주는 역할.
+ *
+ * @see executor.ts - 스텝 실행 전에 이 파일로 프롬프트를 조립한다
+ * @see claude.ts   - 조립된 프롬프트를 Claude에게 전달한다
+ */
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, basename } from "node:path";
 import type { PhaseIndex } from "./types.js";

@@ -1,3 +1,12 @@
+/**
+ * @file cli.ts
+ * @description
+ *   터미널에서 명령어를 입력하면 가장 먼저 실행되는 "현관문".
+ *   사용자가 입력한 옵션(phase 경로, --push, --dry-run 등)을 해석해서
+ *   executor에게 "이 설정으로 실행해줘"라고 전달한다.
+ *
+ * @see executor.ts - CLI가 파싱한 옵션을 받아 실제 작업을 수행한다
+ */
 import { Command } from "commander";
 import { StepExecutor } from "./executor.js";
 

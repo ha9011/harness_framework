@@ -1,3 +1,12 @@
+/**
+ * @file claude.ts
+ * @description
+ *   Claude AI를 호출하는 "전화기" 역할.
+ *   프롬프트(질문)를 Claude CLI에 보내고, 응답을 JSON으로 받아온다.
+ *   하네스가 AI와 소통하는 유일한 창구이다.
+ *
+ * @see executor.ts - 이 파일을 사용해 각 스텝마다 Claude를 호출한다
+ */
 import { spawn } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import type { StepOutput } from "./types.js";

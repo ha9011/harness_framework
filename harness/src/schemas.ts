@@ -1,3 +1,14 @@
+/**
+ * @file schemas.ts
+ * @description
+ *   모든 데이터의 형태를 정의하는 "설계도" (Zod 스키마).
+ *   스텝, 페이즈, 인덱스, 출력 등의 구조를 정의하고,
+ *   런타임에서 실제 데이터가 이 설계도와 맞는지 검증한다.
+ *   쉽게 말해, "이 JSON은 이런 모양이어야 해"라고 규칙을 정해놓은 것.
+ *
+ * @see types.ts  - 이 설계도에서 TypeScript 타입을 자동 생성한다
+ * @see json-io.ts - JSON 읽을 때 이 스키마로 검증한다
+ */
 import { z } from "zod";
 
 // --- Step 상태 ---

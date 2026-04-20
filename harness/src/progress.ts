@@ -1,3 +1,13 @@
+/**
+ * @file progress.ts
+ * @description
+ *   작업이 진행 중일 때 터미널에 스피너를 보여주는 "로딩 표시기".
+ *   Claude 호출처럼 시간이 오래 걸리는 작업 중에
+ *   ◐◓◑◒ 같은 애니메이션과 경과 시간을 표시해서
+ *   "아직 작업 중이에요"라고 사용자에게 알려준다.
+ *
+ * @see executor.ts - Claude 호출 시 이 스피너를 감싸서 사용한다
+ */
 const FRAMES = "◐◓◑◒";
 const FRAME_INTERVAL_MS = 120;
 

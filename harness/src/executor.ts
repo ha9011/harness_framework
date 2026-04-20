@@ -1,3 +1,17 @@
+/**
+ * @file executor.ts
+ * @description
+ *   전체 작업을 순서대로 진행하는 "지휘자" (오케스트레이터).
+ *   스텝을 하나씩 꺼내서 Claude에게 시키고, 결과를 저장하고,
+ *   실패하면 최대 3번까지 재시도한다.
+ *   이 파일이 하네스의 핵심 두뇌 역할을 한다.
+ *
+ * @see cli.ts       - 사용자 명령을 받아 이 파일의 StepExecutor를 실행한다
+ * @see claude.ts    - 각 스텝에서 Claude AI를 호출할 때 사용
+ * @see git.ts       - 스텝 완료 후 자동 커밋할 때 사용
+ * @see guardrails.ts - Claude에게 보낼 프롬프트를 조립할 때 사용
+ * @see fsm.ts       - 스텝 상태 전이가 올바른지 검증할 때 사용
+ */
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { GitClient } from "./git.js";

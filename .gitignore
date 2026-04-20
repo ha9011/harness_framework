@@ -6,6 +6,9 @@ out/
 next-env.d.ts
 tsconfig.tsbuildinfo
 
+scripts/
+harness-review.md
+
 # phase execution outputs
 phases/**/phase*-output.json
 phases/**/step*-output.json

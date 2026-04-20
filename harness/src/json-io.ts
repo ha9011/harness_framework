@@ -1,3 +1,14 @@
+/**
+ * @file json-io.ts
+ * @description
+ *   JSON 파일을 안전하게 읽고 쓰는 "파일 관리인".
+ *   읽을 때 Zod 스키마로 데이터 형식을 자동 검증해서,
+ *   잘못된 데이터가 들어오면 바로 에러를 던진다.
+ *   index.json이나 step-output.json을 다룰 때 사용된다.
+ *
+ * @see schemas.ts  - 검증에 사용하는 Zod 스키마 정의
+ * @see executor.ts - 스텝 실행 중 index.json 읽기/쓰기에 사용
+ */
 import { readFileSync, writeFileSync } from "node:fs";
 import type { ZodType } from "zod";
 
