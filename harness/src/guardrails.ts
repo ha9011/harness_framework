@@ -98,7 +98,7 @@ export function buildPreamble(opts: PreambleOpts): string {
     `## 작업 규칙\n\n` +
     `1. 이전 step에서 작성된 코드를 확인하고 일관성을 유지하라.\n` +
     `2. 이 step에 명시된 작업만 수행하라. 추가 기능이나 파일을 만들지 마라.\n` +
-    `3. 기존 테스트를 깨뜨리지 마라.\n` +
+    `3. 기존 테스트의 기대값(expect/assert)을 변경하지 마라. 변경이 불가피하면 summary에 "⚠️ 테스트 변경: {사유}"를 반드시 기록하라.\n` +
     `4. AC(Acceptance Criteria) 검증을 직접 실행하라.\n` +
     `5. /phases/${phaseDirName}/index.json의 해당 step status를 업데이트하라:\n` +
     `   - AC 통과 → "completed" + "summary" 필드에 이 step의 산출물을 한 줄로 요약\n` +

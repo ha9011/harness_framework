@@ -12,7 +12,7 @@
  * @see guardrails.ts - Claude에게 보낼 프롬프트를 조립할 때 사용
  * @see fsm.ts       - 스텝 상태 전이가 올바른지 검증할 때 사용
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, renameSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { GitClient } from "./git.js";
 import { ClaudeClient } from "./claude.js";
@@ -248,6 +248,28 @@ export class StepExecutor {
     }
   }
 
+  // --- 테스트 파일 변경 감지 ---
+
+  /**
+   * git diff로 테스트 파일(*.test.ts, *.spec.ts 등) 변경을 감지한다.
+   * AI가 테스트 기대값을 조작하여 버그를 숨기는 것을 방지하기 위한 기계적 검증.
+   * 변경된 테스트 파일이 있으면 경고 문자열을 반환하고, 없으면 undefined를 반환한다.
+   */
+  private async detectTestFileChanges(): Promise<string | undefined> {
+    const testPatterns = ["*.test.ts", "*.spec.ts", "*.test.js", "*.spec.js", "*.test.tsx", "*.spec.tsx"];
+    const result = await this.git.run("diff", "--name-only", "HEAD");
+    if (result.returncode !== 0) return undefined;
+
+    const changedFiles = result.stdout.trim().split("\n").filter(Boolean);
+    const changedTests = changedFiles.filter((f) =>
+      testPatterns.some((p) => f.endsWith(p.replace("*", "")))
+    );
+
+    if (changedTests.length === 0) return undefined;
+
+    return `⚠️ 테스트 파일 변경됨: ${changedTests.join(", ")}`;
+  }
+
   // --- 단일 step 실행 ---
 
   private async executeSingleStep(step: Step, guardrails: string): Promise<boolean> {
@@ -311,10 +333,21 @@ export class StepExecutor {
         const fsm = new StepFSM("pending");
         fsm.transition("complete", { summary: currentStep.summary });
 
-        // 타임스탬프 기록
+        // 테스트 파일 변경 감지 — AI 조작 방지
+        const testWarning = await this.detectTestFileChanges();
+        if (testWarning) {
+          console.log(`  ${testWarning}`);
+        }
+
+        // 타임스탬프 기록 + 테스트 경고 태그 삽입
         const mutable = this.readMutable();
         const mStep = mutable.steps.find((s) => s.step === stepNum);
-        if (mStep) mStep.completed_at = ts;
+        if (mStep) {
+          mStep.completed_at = ts;
+          if (testWarning && mStep.summary) {
+            mStep.summary = `${testWarning} | ${mStep.summary}`;
+          }
+        }
         writeJson(this.indexFile, mutable);
 
         await this.git.commitStep({
@@ -472,6 +505,9 @@ export class StepExecutor {
       if (r.returncode === 0) console.log(`  ✓ ${msg}`);
     }
 
+    // PLAN.md 아카이브 — 다음 /prep과의 충돌 방지
+    this.archivePlan();
+
     // auto push
     if (this.autoPush) {
       await this.git.push(`feat-${this.phaseName}`);
@@ -479,6 +515,29 @@ export class StepExecutor {
 
     console.log(`\n${"=".repeat(60)}`);
     console.log(`  Phase '${this.phaseName}' completed!`);
+    console.log(`  다음 작업은 /prep부터 시작하세요.`);
     console.log(`${"=".repeat(60)}`);
+  }
+
+  // --- PLAN.md 아카이브 ---
+
+  /**
+   * docs/PLAN.md를 docs/archive/PLAN_{날짜}_{task-name}.md로 이동한다.
+   * 다음 /prep 실행 시 기존 PLAN.md가 남아있으면 충돌이 발생하므로,
+   * finalize 시점에 자동으로 아카이브한다.
+   */
+  private archivePlan(): void {
+    const planFile = join(this.root, "docs", "PLAN.md");
+    if (!existsSync(planFile)) return;
+
+    const archiveDir = join(this.root, "docs", "archive");
+    if (!existsSync(archiveDir)) {
+      mkdirSync(archiveDir, { recursive: true });
+    }
+
+    const today = kstNow().slice(0, 10); // YYYY-MM-DD
+    const archiveFile = join(archiveDir, `PLAN_${today}_${this.phaseDirName}.md`);
+    renameSync(planFile, archiveFile);
+    console.log(`  ✓ PLAN.md → docs/archive/PLAN_${today}_${this.phaseDirName}.md`);
   }
 }
