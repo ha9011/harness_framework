@@ -2,12 +2,11 @@
 
 ## 디렉토리 구조
 ```
-src/
-├── app/               # 페이지 + API 라우트
-├── components/        # UI 컴포넌트
-├── types/             # TypeScript 타입 정의
-├── lib/               # 유틸리티 + 헬퍼
-└── services/          # 외부 API 래퍼
+backend/               # 백엔드 코드 (API, 서버)
+frontend/              # 프론트엔드 코드 (UI, 클라이언트)
+docs/                  # 프로젝트 문서
+phases/                # harness 실행 메타데이터
+harness/               # harness 프레임워크
 ```
 
 ## 패턴

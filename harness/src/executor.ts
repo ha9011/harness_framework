@@ -535,9 +535,11 @@ export class StepExecutor {
       mkdirSync(archiveDir, { recursive: true });
     }
 
-    const today = kstNow().slice(0, 10); // YYYY-MM-DD
-    const archiveFile = join(archiveDir, `PLAN_${today}_${this.phaseDirName}.md`);
+    const now = kstNow(); // 2025-04-19T17:30:00+0900
+    const stamp = now.slice(0, 19).replace(/[-:]/g, "").replace("T", "_"); // 20250419_173000
+    const archiveName = `PLAN_${stamp}_${this.phaseDirName}.md`;
+    const archiveFile = join(archiveDir, archiveName);
     renameSync(planFile, archiveFile);
-    console.log(`  ✓ PLAN.md → docs/archive/PLAN_${today}_${this.phaseDirName}.md`);
+    console.log(`  ✓ PLAN.md → docs/archive/${archiveName}`);
   }
 }
