@@ -2,6 +2,7 @@
 
 ## 디렉토리 구조
 ```
+design/                # HTML 디자인 목업 시안
 backend/               # 백엔드 코드 (API, 서버)
 frontend/              # 프론트엔드 코드 (UI, 클라이언트)
 docs/                  # 프로젝트 문서
