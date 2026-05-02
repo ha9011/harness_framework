@@ -9,6 +9,7 @@ tsconfig.tsbuildinfo
 
 scripts/
 harness-review.md
+.claude/settings.local.json
 
 # phase execution outputs
 phases/**/phase*-output.json
