@@ -1,9 +1,12 @@
 package com.english.study;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface StudyRecordRepository extends JpaRepository<StudyRecord, Long> {
@@ -12,4 +15,8 @@ public interface StudyRecordRepository extends JpaRepository<StudyRecord, Long> 
 
     @Query("SELECT COALESCE(MAX(s.dayNumber), 0) FROM StudyRecord s")
     Integer findMaxDayNumber();
+
+    List<StudyRecord> findTop5ByOrderByCreatedAtDesc();
+
+    Page<StudyRecord> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

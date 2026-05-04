@@ -13,4 +13,6 @@ public interface PatternRepository extends JpaRepository<Pattern, Long> {
     Optional<Pattern> findByIdAndDeletedFalse(Long id);
 
     Page<Pattern> findByDeletedFalse(Pageable pageable);
+
+    long countByDeletedFalse();
 }

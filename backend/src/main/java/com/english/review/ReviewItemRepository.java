@@ -16,6 +16,10 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
 
     List<ReviewItem> findByItemTypeAndItemId(String itemType, Long itemId);
 
+    @Query("SELECT COUNT(r) FROM ReviewItem r WHERE r.itemType = :itemType " +
+            "AND r.nextReviewDate <= :today AND r.deleted = false")
+    long countTodayRemaining(@Param("itemType") String itemType, @Param("today") LocalDate today);
+
     @Query("SELECT r FROM ReviewItem r WHERE r.itemType = :itemType " +
             "AND r.nextReviewDate <= :today AND r.deleted = false " +
             "AND r.id NOT IN :excludeIds " +

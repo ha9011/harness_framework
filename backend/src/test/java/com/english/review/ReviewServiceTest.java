@@ -6,6 +6,8 @@ import com.english.generate.GeneratedSentenceRepository;
 import com.english.generate.GeneratedSentenceWord;
 import com.english.pattern.Pattern;
 import com.english.pattern.PatternRepository;
+import com.english.setting.SettingService;
+import com.english.setting.UserSettingResponse;
 import com.english.word.Word;
 import com.english.word.WordRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,12 +49,20 @@ class ReviewServiceTest {
     @Mock
     private GeneratedSentenceRepository generatedSentenceRepository;
 
+    @Mock
+    private SettingService settingService;
+
     @InjectMocks
     private ReviewService reviewService;
 
     @Nested
     @DisplayName("카드 선정 - getTodayCards")
     class GetTodayCards {
+
+        @BeforeEach
+        void setUp() {
+            given(settingService.getSetting()).willReturn(new UserSettingResponse(10));
+        }
 
         @Test
         @DisplayName("type=WORD → WORD 타입만 반환")
