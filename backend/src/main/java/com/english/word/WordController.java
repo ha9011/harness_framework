@@ -1,11 +1,14 @@
 package com.english.word;
 
+import com.english.pattern.PatternService;
+import com.english.pattern.WordExtractResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -15,6 +18,7 @@ import java.util.List;
 public class WordController {
 
     private final WordService wordService;
+    private final PatternService patternService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -52,5 +56,10 @@ public class WordController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         wordService.delete(id);
+    }
+
+    @PostMapping("/extract")
+    public WordExtractResponse extractFromImage(@RequestParam("image") MultipartFile image) {
+        return patternService.extractWordsFromImage(image);
     }
 }

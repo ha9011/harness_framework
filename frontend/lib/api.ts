@@ -51,6 +51,25 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  upload: <T>(path: string, formData: FormData) =>
+    uploadRequest<T>(path, formData),
 };
+
+async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error: ErrorResponse = await res.json().catch(() => ({
+      code: "UNKNOWN",
+      message: res.statusText,
+    }));
+    throw new ApiError(error.code, error.message, res.status);
+  }
+
+  return res.json();
+}
 
 export { ApiError };
