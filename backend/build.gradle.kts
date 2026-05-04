@@ -36,3 +36,16 @@ dependencies {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+tasks.test {
+	useJUnitPlatform {
+		excludeTags("integration")
+	}
+}
+
+tasks.register<Test>("integrationTest") {
+	useJUnitPlatform {
+		includeTags("integration")
+	}
+	shouldRunAfter(tasks.test)
+}
