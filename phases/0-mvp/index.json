@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "sentence-generate",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-04T22:25:03+0900",
+      "summary": "GeneratedSentence+SentenceSituation+GeneratedSentenceWord+GenerationHistory Entity(4개)+Repository(2개)+GenerateService(일반/단어지정/패턴지정 생성+단어선택 우선순위+최대50개+잘못된wordId무시+generation_history기록)+GenerateController(4개 엔드포인트)+DTO(5개)+GenerateServiceTest(11개)+GenerateControllerTest(8개)+프론트엔드 예문 생성 페이지(난이도/개수 선택+결과 카드+상황 말풍선+해석 펼침+이력 탭) 구현 완료",
+      "completed_at": "2026-05-04T22:35:58+0900"
     },
     {
       "step": 4,
