@@ -1,76 +1,129 @@
 # UI 디자인 가이드
 
+> design/tokens.jsx와 design/shared.jsx에서 추출. Cozy Cafe & Coffee Tree 테마.
+
 ## 디자인 원칙
-1. {원칙 1 — 예: "도구처럼 보여야 한다. 마케팅 페이지가 아니라 매일 쓰는 대시보드."}
-2. {원칙 2}
-3. {원칙 3}
+1. **매일 쓰는 학습 도구** — 마케팅 페이지가 아니라 매일 복습하는 대시보드. 심플하고 기능 중심
+2. **따뜻한 카페 분위기** — 크림, 오트밀, 라떼 브라운 톤. 눈이 편안하고 아늑한 느낌
+3. **한 손 복습** — 모바일 우선. 엄지 하나로 카드 플립 + 응답 가능한 레이아웃
 
 ## AI 슬롭 안티패턴 — 하지 마라
 | 금지 사항 | 이유 |
 |-----------|------|
 | backdrop-filter: blur() | glass morphism은 AI 템플릿의 가장 흔한 징후 |
 | gradient-text (배경 그라데이션 텍스트) | AI가 만든 SaaS 랜딩의 1번 특징 |
-| "Powered by AI" 배지 | 기능이 아니라 장식. 사용자에게 가치 없음 |
 | box-shadow 글로우 애니메이션 | 네온 글로우 = AI 슬롭 |
-| 보라/인디고 브랜드 색상 | "AI = 보라색" 클리셰 |
-| 모든 카드에 동일한 rounded-2xl | 균일한 둥근 모서리는 템플릿 느낌 |
+| 보라/인디고 브랜드 색상 | "AI = 보라색" 클리셰. 우리는 브라운/세이지 |
 | 배경 gradient orb (blur-3xl 원형) | 모든 AI 랜딩 페이지에 있는 장식 |
 
 ## 색상
 ### 배경
-| 용도 | 값 |
-|------|------|
-| 페이지 | {예: #0a0a0a} |
-| 카드 | {예: #141414} |
+| 용도 | Light | Dark | Tailwind 참고 |
+|------|-------|------|--------------|
+| 페이지 배경 | #FAF6F0 | #1F1812 | bg-cream |
+| 카드/올림면 | #FFFCF7 | #2A2018 | bg-raised |
+| 크라프트지 | #E8DCC8 | #3A2D22 | bg-kraft |
+| 부드러운 배경 | #F2EADD | #332821 | bg-soft |
 
 ### 텍스트
-| 용도 | 값 |
-|------|------|
-| 주 텍스트 | {예: text-white} |
-| 본문 | {예: text-neutral-300} |
-| 보조 | {예: text-neutral-400} |
-| 비활성 | {예: text-neutral-500} |
+| 용도 | Light | Dark |
+|------|-------|------|
+| 주 텍스트 (ink) | #3D2E22 | #F5EBD9 |
+| 본문 (inkSoft) | #6B5644 | #C8B59E |
+| 보조 (inkMuted) | #9A8676 | #8C7A66 |
 
-### 데이터/시맨틱 색상
+### 포인트 색상 (팔레트)
+| 팔레트 | Primary | Deep | Soft |
+|--------|---------|------|------|
+| 라떼 브라운 | #A67C52 | #8C6440 | #E8D5BE |
+| 모카 | #6F4E37 | #523926 | #D9C5B0 |
+| 세이지 그린 | #7A8F6B | #5A6E4F | #D4DCC4 |
+
+### 시맨틱 색상
 | 용도 | 값 |
 |------|------|
-| {긍정/성공} | {예: #22c55e} |
-| {부정/에러} | {예: #ef4444} |
-| {중립/기본} | {예: #525252} |
+| 세이지 (식물/성장) | #7A8F6B |
+| 세이지 배경 | #EBF0E2 |
+| 경고/시들음 | #C77E47 |
 
 ## 컴포넌트
-### 카드
+### 카드 (Surface)
 ```
-{예: rounded-lg bg-[#141414] border border-neutral-800 p-6}
+bg-raised rounded-[20px] border border-hairline
+shadow: 0 2px 6px rgba(120,90,60,0.08), 0 12px 28px -8px rgba(120,90,60,0.12)
 ```
 
-### 버튼
+### 버튼 (CafeButton)
 ```
-Primary: {예: rounded-lg bg-white text-black hover:bg-neutral-200}
-Text:    {예: text-neutral-500 hover:text-neutral-300}
+Primary: bg-primary text-white rounded-[14px] h-[42px] shadow-primary
+Secondary: bg-raised text-ink rounded-[14px] border-hairline shadow-card
+Ghost: bg-transparent text-ink border-hairline
+Sage: bg-sage text-white rounded-[14px] shadow-sage
+```
+
+### 탭 (TabPills)
+```
+컨테이너: bg-soft rounded-[14px] border-hairline p-1 flex gap-1.5
+활성 탭: bg-raised text-ink font-semibold shadow-sm rounded-[10px]
+비활성 탭: bg-transparent text-inkMuted
+뱃지: bg-primary text-white text-[10px] px-1.5 rounded-full (활성 시)
 ```
 
 ### 입력 필드
 ```
-{예: rounded-lg bg-neutral-900 border border-neutral-800 px-4 py-3}
+bg-soft rounded-[12px] border border-hairline px-4 py-3 text-ink
+```
+
+### 상황 구름 말풍선 (SituationCloud)
+```
+bg-sageBg text-sage rounded-[18px] px-3.5 py-2 border border-sage/10
+shadow: 0 2px 6px sage/10
+꼬리: SVG 삼각형 (bottom-left)
+```
+
+### 칩 (Chip)
+```
+inline-flex px-2.5 py-1 rounded-full text-[11.5px] font-medium
+default: bg-soft text-inkSoft
+sage: bg-sageBg text-sage
+warm: bg-primarySoft text-primaryDeep
 ```
 
 ## 레이아웃
-- 전체 너비: {예: max-w-5xl}
-- 정렬: {예: 좌측 정렬 기본. 중앙 정렬 금지}
-- 간격: {예: gap-3~4, 섹션 간 space-y-8}
+- 전체 너비: 모바일 100%, 데스크톱 max-w-md (420px) 중앙 정렬
+- 하단 네비게이션: 고정, paddingBottom 28px (safe area)
+- 상단 헤더: paddingTop 40px (노치/다이나믹 아일랜드)
+- 간격: gap-3~4, 섹션 간 mt-5~6
+- 카드 패딩: p-4~5
 
 ## 타이포그래피
+| 프리셋 | Heading | Body | Serif |
+|--------|---------|------|-------|
+| warm (기본) | Gowun Dodum + Fraunces | Gowun Dodum | Fraunces |
+| modern | Pretendard + Inter | Pretendard | Fraunces |
+
 | 용도 | 스타일 |
 |------|--------|
-| 페이지 제목 | {예: text-4xl font-semibold text-white} |
-| 카드 제목 | {예: text-sm font-medium text-neutral-400} |
-| 본문 | {예: text-sm text-neutral-300 leading-relaxed} |
+| 페이지 제목 | text-lg font-semibold text-ink tracking-tight |
+| 카드 제목 | text-sm font-semibold text-ink |
+| 본문 | text-sm text-inkSoft leading-relaxed |
+| 보조/라벨 | text-xs text-inkMuted |
+| 섹션 헤더 | text-xs font-semibold text-inkSoft uppercase |
 
 ## 애니메이션
-- {허용할 애니메이션만 나열. 예: fade-in (0.4s), slide-up (0.5s)}
-- {그 외 모든 애니메이션 금지}
+- **카드 플립**: CSS transform rotateY(180deg), transition 0.4s ease
+- **버튼 누름**: translateY(1px) on mouseDown, 0.12s ease
+- **탭 전환**: all 0.15s ease
+- **커피나무 시들음/회복**: opacity + 색상 변화 transition
+- 그 외 불필요한 애니메이션 금지
 
 ## 아이콘
-- {예: SVG 인라인, strokeWidth 1.5}
-- {예: 아이콘 컨테이너(둥근 배경 박스)로 감싸지 않는다}
+- SVG 인라인, strokeWidth 1.5~2
+- 네비게이션: 활성 시 fill 12% opacity + strokeWidth 2
+- 아이콘 컨테이너(둥근 배경 박스)로 감싸지 않는다
+
+## 하단 네비게이션
+```
+[🏠 홈] [📖 단어] [🔤 패턴] [✨ 생성] [🃏 복습]
+학습 기록, 설정은 홈 화면 내 링크로 접근
+```
