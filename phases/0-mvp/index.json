@@ -53,7 +53,10 @@
     {
       "step": 6,
       "name": "integration-test",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-05T07:08:16+0900",
+      "summary": "TestContainers 통합테스트 6개(IntegrationTestBase+Word/Generate/Review/SoftDelete/GeminiFallback/E2E)+Gradle integrationTest task 분리(Docker 필요시 별도 실행)+프론트엔드 UX 검증(빈상태/에러/로딩/반응형 기존 구현 확인)+단위테스트112개 통과+빌드+린트 성공",
+      "completed_at": "2026-05-05T07:19:01+0900"
     }
   ],
   "created_at": "2026-05-04T21:56:16+0900"
