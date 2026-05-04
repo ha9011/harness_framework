@@ -4,6 +4,8 @@ import com.english.config.DuplicateException;
 import com.english.config.EmptyRequestException;
 import com.english.config.GlobalExceptionHandler;
 import com.english.config.NotFoundException;
+import com.english.pattern.PatternService;
+import com.english.pattern.WordExtractResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +19,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -28,6 +31,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +41,9 @@ class WordControllerTest {
 
     @Mock
     private WordService wordService;
+
+    @Mock
+    private PatternService patternService;
 
     @InjectMocks
     private WordController wordController;
@@ -204,6 +211,27 @@ class WordControllerTest {
             mockMvc.perform(delete("/api/words/999"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/words/extract")
+    class ExtractWords {
+
+        @Test
+        @DisplayName("단어 이미지 추출 성공 → 200")
+        void extractSuccess() throws Exception {
+            WordExtractResponse response = new WordExtractResponse(
+                    List.of(new WordExtractResponse.ExtractedWord("apple", "사과"))
+            );
+            given(patternService.extractWordsFromImage(any())).willReturn(response);
+
+            MockMultipartFile image = new MockMultipartFile(
+                    "image", "test.png", "image/png", new byte[]{1, 2, 3});
+
+            mockMvc.perform(multipart("/api/words/extract").file(image))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.words[0].word").value("apple"));
         }
     }
 }
