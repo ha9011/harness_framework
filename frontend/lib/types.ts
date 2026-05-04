@@ -108,3 +108,44 @@ export interface GenerationHistoryResponse {
   patternId: number | null;
   createdAt: string;
 }
+
+export interface ReviewCardFront {
+  word: string | null;
+  meaning: string | null;
+  template: string | null;
+  description: string | null;
+  englishSentence: string | null;
+  situation: string | null;
+}
+
+export interface ReviewCardExample {
+  englishSentence: string;
+  koreanTranslation: string;
+}
+
+export interface ReviewCardBack {
+  word: string | null;
+  meaning: string | null;
+  partOfSpeech: string | null;
+  template: string | null;
+  description: string | null;
+  koreanTranslation: string | null;
+  examples: ReviewCardExample[] | null;
+}
+
+export interface ReviewCard {
+  id: number;
+  itemType: string;
+  direction: string;
+  front: ReviewCardFront;
+  back: ReviewCardBack;
+}
+
+export interface ReviewResultResponse {
+  id: number;
+  result: string;
+  intervalDays: number;
+  nextReviewDate: string;
+  easeFactor: number;
+  reviewCount: number;
+}
