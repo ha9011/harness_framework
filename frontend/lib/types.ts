@@ -78,3 +78,33 @@ export interface PatternExtractResponse {
 export interface WordExtractResponse {
   words: { word: string; meaning: string }[];
 }
+
+export interface GenerateRequest {
+  level: string;
+  count: number;
+  wordId?: number;
+  patternId?: number;
+}
+
+export interface SentenceResponse {
+  id: number;
+  englishSentence: string;
+  koreanTranslation: string;
+  level: string;
+  situations: string[];
+}
+
+export interface GenerateResponse {
+  generationId: number | null;
+  sentences: SentenceResponse[];
+}
+
+export interface GenerationHistoryResponse {
+  id: number;
+  level: string;
+  requestedCount: number;
+  actualCount: number;
+  wordId: number | null;
+  patternId: number | null;
+  createdAt: string;
+}
