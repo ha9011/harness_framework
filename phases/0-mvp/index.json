@@ -45,7 +45,10 @@
     {
       "step": 5,
       "name": "dashboard-settings",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-05T06:55:51+0900",
+      "summary": "UserSetting Entity+Repository+SettingService(조회/변경+기본값 자동생성)+DashboardService(카운트+streak계산+타입별 todayReviewRemaining+최근학습기록5개)+StudyRecordService 확장(목록 페이지네이션)+Controller 3개(Dashboard/Setting/StudyRecord)+DTO 3개+ReviewService dailyReviewCount 연동+SettingServiceTest(3개)+DashboardServiceTest(7개)+StudyRecordServiceTest(2개)+DashboardControllerTest(2개)+SettingControllerTest(2개)+StudyRecordControllerTest(1개)+프론트엔드 홈 대시보드(커피나무 성장SVG+통계+복습잔여+최근학습)+학습기록 페이지+설정 페이지(복습개수 10/20/30) 구현 완료",
+      "completed_at": "2026-05-05T07:08:15+0900"
     },
     {
       "step": 6,
