@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "pattern-extract",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-04T22:14:53+0900",
+      "summary": "Pattern+PatternExample Entity(OneToMany)+PatternRepository+PatternService(CRUD+이미지추출+학습기록+복습아이템 연동)+PatternController(5개 엔드포인트)+WordController extract 추가+DTO 6개+PatternServiceTest(10개)+PatternControllerTest(8개)+프론트엔드 패턴 목록/상세/등록(직접입력+이미지추출) 구현 완료",
+      "completed_at": "2026-05-04T22:25:03+0900"
     },
     {
       "step": 3,
