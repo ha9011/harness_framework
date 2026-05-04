@@ -1,9 +1,11 @@
-# 프로젝트: {프로젝트명}
+# 프로젝트: 영어 패턴 학습기 (Cozy Cafe)
 
 ## 기술 스택
-- {프레임워크 (예: Next.js 15)}
-- {언어 (예: TypeScript strict mode)}
-- {스타일링 (예: Tailwind CSS)}
+- 프론트엔드: Next.js (App Router) + TypeScript + Tailwind CSS
+- 백엔드: Spring Boot + JPA + Java
+- DB: PostgreSQL 16 (Docker)
+- AI: Gemini API (Vision + Text Generation)
+- 테스트: JUnit5 + MockMvc + TestContainers (백엔드), TDD
 
 ## 아키텍처 규칙
 - CRITICAL: 백엔드 코드는 반드시 `backend/` 폴더에서 작성할 것
@@ -15,10 +17,24 @@
 - 커밋 메시지는 conventional commits 형식을 따를 것 (feat:, fix:, docs:, refactor:)
 
 ## 명령어
-npm run dev      # 개발 서버
-npm run build    # 프로덕션 빌드
-npm run lint     # ESLint
-npm run test     # 테스트
+docker compose up -d                # PostgreSQL 기동
+cd backend && ./gradlew test        # 백엔드 테스트
+cd backend && ./gradlew bootRun     # 백엔드 개발 서버 (localhost:8080)
+cd frontend && npm run dev          # 프론트엔드 개발 서버 (localhost:3000)
+cd frontend && npm run build        # 프론트엔드 빌드
+cd frontend && npm run lint         # ESLint
+
+## 환경 설정
+- Gemini API 키: 환경 변수 `GEMINI_API_KEY`로 주입. backend/src/main/resources/application.yml에서 `${GEMINI_API_KEY}` 참조
+- DB 스키마: `spring.jpa.hibernate.ddl-auto=update` (개발). JPA Entity 기반 자동 생성
+- CORS: CorsConfig.java에서 localhost:3000 허용 (개발 환경)
+- Gemini 재시도: 총 3회 시도 (즉시 → 1초 후 → 3초 후). 3회 모두 실패 시 fallback
+
+## 에러 처리 원칙
+- Gemini API 실패 → 보강 없이 저장 (단건), 부분 성공 (벌크). 총 3회 시도 후 fallback
+- 이미지 추출 실패 → 에러 메시지 + 재시도 안내. 이미지 미저장
+- 모든 삭제는 soft delete. 예문은 유지, 해당 타입 review_items만 삭제
+- Polymorphic association (item_type + item_id) → 애플리케이션 레벨 ID 검증 필수
 
 ## 행동 원칙
 
