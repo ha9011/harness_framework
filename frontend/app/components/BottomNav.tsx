@@ -33,7 +33,7 @@ export default function BottomNav() {
                   : "text-ink-muted"
               }`}
             >
-              <span className="text-lg">{item.icon}</span>
+              <span className="text-lg" suppressHydrationWarning>{item.icon}</span>
               <span>{item.label}</span>
             </Link>
           );

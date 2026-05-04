@@ -23,20 +23,30 @@ export default function FlipCard({ front, back, flipped, onFlip }: FlipCardProps
 
   return (
     <div
-      className="perspective-1000 w-full cursor-pointer"
+      className="w-full cursor-pointer"
+      style={{ perspective: "1000px" }}
       onClick={handleClick}
     >
       <div
-        className={`relative w-full min-h-[280px] transition-transform duration-400 ease-in-out preserve-3d ${
-          isFlipped ? "rotate-y-180" : ""
-        }`}
+        className="relative w-full min-h-[280px]"
+        style={{
+          transformStyle: "preserve-3d",
+          transition: "transform 0.4s ease",
+          transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+        }}
       >
         {/* 앞면 */}
-        <div className="absolute inset-0 backface-hidden bg-raised rounded-[20px] border border-hairline shadow-card p-5 flex flex-col justify-center items-center">
+        <div
+          className="absolute inset-0 bg-raised rounded-[20px] border border-hairline shadow-card p-5 flex flex-col justify-center items-center"
+          style={{ backfaceVisibility: "hidden" }}
+        >
           {front}
         </div>
         {/* 뒷면 */}
-        <div className="absolute inset-0 backface-hidden rotate-y-180 bg-raised rounded-[20px] border border-hairline shadow-card p-5 flex flex-col justify-center items-center">
+        <div
+          className="absolute inset-0 bg-raised rounded-[20px] border border-hairline shadow-card p-5 flex flex-col justify-center items-center"
+          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+        >
           {back}
         </div>
       </div>

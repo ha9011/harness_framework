@@ -58,7 +58,12 @@ export default function WordAddModal({ onClose, onSuccess }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-end justify-center z-50">
+    <div
+      className="fixed inset-0 bg-black/30 flex items-end justify-center z-50"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-raised w-full max-w-md rounded-t-[20px] p-5 pb-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-ink">단어 등록</h2>
