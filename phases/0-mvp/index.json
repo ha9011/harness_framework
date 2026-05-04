@@ -37,10 +37,10 @@
     {
       "step": 4,
       "name": "review-system",
-      "status": "error",
-      "started_at": "2026-05-04T22:35:58+0900",
-      "error_message": "[3회 시도 후 실패] Step did not update status",
-      "failed_at": "2026-05-04T22:38:57+0900"
+      "status": "completed",
+      "started_at": "2026-05-05T06:45:01+0900",
+      "summary": "ReviewLogRepository+ReviewService(카드선정 알고리즘: HARD우선→오래된순→복습적은순+LIMIT10+랜��셔플+SM-2 간격조정)+ReviewController(2개 엔드포인트: GET /today, POST /{id})+DTO(4개: CardResponse/ResultResponse/ResultRequest)+ReviewServiceTest(12개)+ReviewControllerTest(5개)+GeneratedSentenceRepository.findByWordId 추가+프론트엔드 복습 페이지(TabPills 탭분리+FlipCard 카드플립+EASY/MEDIUM/HARD 응답+처음부터다시 읽기전용+추가복습) 구현 완료",
+      "completed_at": "2026-05-05T06:55:51+0900"
     },
     {
       "step": 5,
