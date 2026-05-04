@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "word-crud",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-04T22:03:16+0900",
+      "summary": "Word Entity(CRUD+soft delete)+WordRepository(검색/필터/정렬)+WordService(AI보강+학습기록+복습아이템 연동)+WordController(6개 엔드포인트)+DTO 5개+WordServiceTest(14개)+WordControllerTest(7개)+프론트엔드 단어 목록/상세/등록(Cozy Cafe 테마)+BottomNav 공통 컴포넌트 구현 완료",
+      "completed_at": "2026-05-04T22:14:53+0900"
     },
     {
       "step": 2,
