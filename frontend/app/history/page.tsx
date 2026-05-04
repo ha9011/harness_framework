@@ -61,7 +61,9 @@ export default function HistoryPage() {
                 <span className="text-sm font-semibold text-primary">
                   Day {r.dayNumber}
                 </span>
-                <span className="text-xs text-ink-muted">{r.createdAt}</span>
+                <span className="text-xs text-ink-muted">
+                  {new Date(r.createdAt).toLocaleDateString("ko-KR")}
+                </span>
               </div>
               <div className="flex gap-3 mt-2">
                 <span className="px-2.5 py-1 rounded-full text-[11.5px] font-medium bg-soft text-ink-soft">

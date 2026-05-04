@@ -11,6 +11,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     api
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
+    setError(false);
     try {
       const result = await api.put<UserSettingResponse>("/settings", {
         dailyReviewCount,
@@ -31,7 +33,8 @@ export default function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
-      // 에러 무시
+      setError(true);
+      setTimeout(() => setError(false), 3000);
     } finally {
       setSaving(false);
     }
@@ -80,6 +83,11 @@ export default function SettingsPage() {
         >
           {saving ? "저장 중..." : saved ? "저장 완료" : "저장"}
         </button>
+        {error && (
+          <p className="mt-2 text-xs text-warn text-center">
+            저장에 실패했습니다. 다시 시도해주세요.
+          </p>
+        )}
       </div>
     </div>
   );

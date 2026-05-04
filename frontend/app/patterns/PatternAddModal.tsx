@@ -105,7 +105,12 @@ export default function PatternAddModal({ onClose, onSuccess }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/30"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-raised w-full max-w-md rounded-t-[24px] p-5 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-ink">패턴 등록</h2>

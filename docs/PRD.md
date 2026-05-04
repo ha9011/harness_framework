@@ -23,7 +23,9 @@
 - **soft delete 연쇄**: 단어/패턴 삭제 시 예문은 유지, WORD/PATTERN review_items만 삭제. SENTENCE 카드는 유지
 - **SM-2 이중 적용 방지**: "처음부터 다시"는 읽기 전용(SM-2 미적용)
 
-## MVP 제외 사항
+## MVP 제외 사항 (다음 Phase 후보)
+- 회원가입/로그인 (인증·인가) — 다중 사용자 지원, 데이터 격리
+- 미니PC 배포 — Docker Compose로 백엔드+프론트+DB 전체 컨테이너화, 셀프호스팅
 - TTS/STT 말하기 기능 (Web Speech API)
 - 퀴즈/빈칸 테스트
 - 즐겨찾기

@@ -40,18 +40,21 @@ public class ReviewService {
 
         List<ReviewItem> items = reviewItemRepository.findTodayCards(type, LocalDate.now(), excludeIds);
 
+        // 카드 응답 빌드 (원본 삭제된 항목은 null → 제외)
+        List<ReviewCardResponse> cards = items.stream()
+                .map(this::buildCardResponse)
+                .filter(card -> card != null)
+                .collect(Collectors.toList());
+
         // LIMIT N (설정에서 dailyReviewCount 조회)
         int dailyReviewCount = settingService.getSetting().getDailyReviewCount();
-        int limit = Math.min(items.size(), dailyReviewCount);
-        List<ReviewItem> selected = new ArrayList<>(items.subList(0, limit));
+        int limit = Math.min(cards.size(), dailyReviewCount);
+        List<ReviewCardResponse> selected = new ArrayList<>(cards.subList(0, limit));
 
         // 랜덤 셔플
         Collections.shuffle(selected);
 
-        return selected.stream()
-                .map(this::buildCardResponse)
-                .filter(card -> card != null)
-                .collect(Collectors.toList());
+        return selected;
     }
 
     /**

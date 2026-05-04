@@ -26,6 +26,7 @@ public class GeminiClient {
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
     private static final int MAX_RETRIES = 3;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public GeminiClient(@Value("${gemini.api-key}") String apiKey) {
         this.apiKey = apiKey;
         this.apiUrl = DEFAULT_API_URL;

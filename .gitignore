@@ -11,6 +11,9 @@ scripts/
 harness-review.md
 .claude/settings.local.json
 
+# local config
+application-local.yml
+
 # phase execution outputs
 phases/**/phase*-output.json
 phases/**/step*-output.json
