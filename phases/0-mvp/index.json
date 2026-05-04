@@ -1,0 +1,45 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "0-mvp",
+  "steps": [
+    {
+      "step": 0,
+      "name": "project-setup",
+      "status": "completed",
+      "started_at": "2026-05-04T21:56:16+0900",
+      "summary": "Docker Compose(PostgreSQL 16) + Spring Boot 3.5(JPA/Validation/Lombok) + Next.js(App Router/TS/Tailwind) + CORS + GlobalExceptionHandler(7개 예외) + GeminiClient(재시도 3회/MockWebServer 테스트) + StudyRecord/ReviewItem Entity·Repository·Service 구현 완료",
+      "completed_at": "2026-05-04T22:03:15+0900"
+    },
+    {
+      "step": 1,
+      "name": "word-crud",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "pattern-extract",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "sentence-generate",
+      "status": "pending"
+    },
+    {
+      "step": 4,
+      "name": "review-system",
+      "status": "pending"
+    },
+    {
+      "step": 5,
+      "name": "dashboard-settings",
+      "status": "pending"
+    },
+    {
+      "step": 6,
+      "name": "integration-test",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-05-04T21:56:16+0900"
+}
