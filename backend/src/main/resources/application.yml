@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: english-app
+  datasource:
+    url: jdbc:postgresql://localhost:5432/english_app
+    username: app
+    password: app1234
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}

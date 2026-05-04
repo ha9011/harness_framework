@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/english_app_test
+    username: app
+    password: app1234
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+gemini:
+  api-key: test-api-key
