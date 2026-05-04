@@ -55,4 +55,37 @@ public class ReviewItem {
         this.direction = direction;
         this.nextReviewDate = LocalDate.now();
     }
+
+    /**
+     * SM-2 기반 커스텀 간격 반복 적용
+     * @return ReviewLog 기록용 데이터
+     */
+    public ReviewLog applyResult(String result) {
+        int previousInterval = this.intervalDays;
+        double previousEaseFactor = this.easeFactor;
+
+        switch (result) {
+            case "EASY":
+                this.intervalDays = (int) Math.round(this.intervalDays * this.easeFactor * 1.3);
+                this.easeFactor += 0.15;
+                break;
+            case "MEDIUM":
+                this.intervalDays = (int) Math.round(this.intervalDays * this.easeFactor);
+                break;
+            case "HARD":
+                this.intervalDays = 1;
+                this.easeFactor = Math.max(1.3, this.easeFactor - 0.2);
+                break;
+            default:
+                throw new IllegalArgumentException("잘못된 결과: " + result);
+        }
+
+        this.nextReviewDate = LocalDate.now().plusDays(this.intervalDays);
+        this.reviewCount++;
+        this.lastResult = result;
+        this.lastReviewedAt = LocalDateTime.now();
+
+        return new ReviewLog(this.id, result, previousInterval, this.intervalDays,
+                previousEaseFactor, this.easeFactor);
+    }
 }
