@@ -19,6 +19,8 @@ public interface WordRepository extends JpaRepository<Word, Long> {
 
     boolean existsByWordAndDeletedFalse(String word);
 
+    long countByDeletedFalse();
+
     @Query("SELECT w FROM Word w WHERE w.deleted = false " +
             "AND (:search IS NULL OR LOWER(w.word) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(w.meaning) LIKE LOWER(CONCAT('%', :search, '%'))) " +

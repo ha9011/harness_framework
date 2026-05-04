@@ -149,3 +149,30 @@ export interface ReviewResultResponse {
   easeFactor: number;
   reviewCount: number;
 }
+
+export interface ReviewRemaining {
+  word: number;
+  pattern: number;
+  sentence: number;
+}
+
+export interface StudyRecordDto {
+  id: number;
+  dayNumber: number;
+  createdAt: string;
+  wordCount: number;
+  patternCount: number;
+}
+
+export interface DashboardResponse {
+  wordCount: number;
+  patternCount: number;
+  sentenceCount: number;
+  streak: number;
+  todayReviewRemaining: ReviewRemaining;
+  recentStudyRecords: StudyRecordDto[];
+}
+
+export interface UserSettingResponse {
+  dailyReviewCount: number;
+}

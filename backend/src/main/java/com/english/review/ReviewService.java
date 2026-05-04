@@ -6,6 +6,7 @@ import com.english.generate.GeneratedSentenceRepository;
 import com.english.pattern.Pattern;
 import com.english.pattern.PatternExample;
 import com.english.pattern.PatternRepository;
+import com.english.setting.SettingService;
 import com.english.word.Word;
 import com.english.word.WordRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,13 +23,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReviewService {
 
-    private static final int DEFAULT_DAILY_REVIEW_COUNT = 10;
-
     private final ReviewItemRepository reviewItemRepository;
     private final ReviewLogRepository reviewLogRepository;
     private final WordRepository wordRepository;
     private final PatternRepository patternRepository;
     private final GeneratedSentenceRepository generatedSentenceRepository;
+    private final SettingService settingService;
 
     /**
      * 오늘 복습할 카드 선정
@@ -40,8 +40,9 @@ public class ReviewService {
 
         List<ReviewItem> items = reviewItemRepository.findTodayCards(type, LocalDate.now(), excludeIds);
 
-        // LIMIT N (dailyReviewCount 기본 10)
-        int limit = Math.min(items.size(), DEFAULT_DAILY_REVIEW_COUNT);
+        // LIMIT N (설정에서 dailyReviewCount 조회)
+        int dailyReviewCount = settingService.getSetting().getDailyReviewCount();
+        int limit = Math.min(items.size(), dailyReviewCount);
         List<ReviewItem> selected = new ArrayList<>(items.subList(0, limit));
 
         // 랜덤 셔플

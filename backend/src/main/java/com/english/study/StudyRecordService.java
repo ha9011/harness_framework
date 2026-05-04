@@ -1,6 +1,8 @@
 package com.english.study;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,5 +35,20 @@ public class StudyRecordService {
     public void addItem(StudyRecord record, String itemType, Long itemId) {
         StudyRecordItem item = new StudyRecordItem(record.getId(), itemType, itemId);
         studyRecordItemRepository.save(item);
+    }
+
+    /**
+     * 학습 기록 목록 조회 (최신순, 페이지네이션)
+     */
+    @Transactional(readOnly = true)
+    public Page<StudyRecordResponse> getRecords(Pageable pageable) {
+        return studyRecordRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(record -> new StudyRecordResponse(
+                        record.getId(),
+                        record.getDayNumber(),
+                        record.getCreatedAt().toString(),
+                        (int) studyRecordItemRepository.countByStudyRecordIdAndItemType(record.getId(), "WORD"),
+                        (int) studyRecordItemRepository.countByStudyRecordIdAndItemType(record.getId(), "PATTERN")
+                ));
     }
 }
