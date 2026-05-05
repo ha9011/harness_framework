@@ -34,7 +34,7 @@ public class ReviewService {
     /**
      * 오늘 복습할 카드 선정
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ReviewCardResponse> getTodayCards(User user, String type, List<Long> exclude) {
         List<Long> excludeIds = (exclude == null || exclude.isEmpty())
                 ? Collections.singletonList(-1L) : exclude;

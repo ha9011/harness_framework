@@ -12,9 +12,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -35,8 +35,15 @@ class GenerateIntegrationTest extends IntegrationTestBase {
     @Autowired
     private ReviewItemRepository reviewItemRepository;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    private HttpHeaders authHeaders;
+
     @BeforeEach
     void setUp() {
+        authHeaders = getDefaultAuthHeaders();
+
         // AI 보강 mock
         given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                 .willReturn(new WordEnrichment("명사", "/test/", "syn", "tip"));
@@ -46,14 +53,16 @@ class GenerateIntegrationTest extends IntegrationTestBase {
     @DisplayName("단어+패턴 등록 → 예문 생성 → situations 5개 + sentence_words 매핑 확인")
     void generate_fullFlow() {
         // given - 단어, 패턴 등록
-        ResponseEntity<WordResponse> wordRes = restTemplate.postForEntity(
-                "/api/words", new WordCreateRequest("coffee", "커피"), WordResponse.class);
+        ResponseEntity<WordResponse> wordRes = restTemplate.exchange(
+                "/api/words", HttpMethod.POST,
+                new HttpEntity<>(new WordCreateRequest("coffee", "커피"), authHeaders),
+                WordResponse.class);
         Long wordId = wordRes.getBody().getId();
 
-        restTemplate.postForEntity("/api/patterns",
-                new PatternCreateRequest("I want to ~", "~하고 싶다", List.of(
+        restTemplate.exchange("/api/patterns", HttpMethod.POST,
+                new HttpEntity<>(new PatternCreateRequest("I want to ~", "~하고 싶다", List.of(
                         new PatternCreateRequest.ExampleRequest("I want to go", "나는 가고 싶다")
-                )), PatternResponse.class);
+                )), authHeaders), PatternResponse.class);
 
         // Gemini 예문 생성 mock
         GeminiGenerateResponse.GeminiSentence sentence = new GeminiGenerateResponse.GeminiSentence(
@@ -69,21 +78,24 @@ class GenerateIntegrationTest extends IntegrationTestBase {
 
         // when
         GenerateRequest request = new GenerateRequest("ELEMENTARY", 1, null, null);
-        ResponseEntity<GenerateResponse> response = restTemplate.postForEntity(
-                "/api/generate", request, GenerateResponse.class);
+        ResponseEntity<GenerateResponse> response = restTemplate.exchange(
+                "/api/generate", HttpMethod.POST,
+                new HttpEntity<>(request, authHeaders), GenerateResponse.class);
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getSentences()).hasSize(1);
 
-        // DB 검증: situations 5개
-        List<GeneratedSentence> sentences = generatedSentenceRepository.findAll();
-        assertThat(sentences).hasSize(1);
-        assertThat(sentences.get(0).getSituations()).hasSize(5);
+        // DB 검증: situations 5개 + sentence_words 매핑 (트랜잭션 내에서 Lazy 로딩)
+        transactionTemplate.executeWithoutResult(status -> {
+            List<GeneratedSentence> sentences = generatedSentenceRepository.findAll();
+            assertThat(sentences).hasSize(1);
+            assertThat(sentences.get(0).getSituations()).hasSize(5);
 
-        // sentence_words 매핑 확인
-        assertThat(sentences.get(0).getSentenceWords()).hasSize(1);
-        assertThat(sentences.get(0).getSentenceWords().get(0).getWordId()).isEqualTo(wordId);
+            // sentence_words 매핑 확인
+            assertThat(sentences.get(0).getSentenceWords()).hasSize(1);
+            assertThat(sentences.get(0).getSentenceWords().get(0).getWordId()).isEqualTo(wordId);
+        });
 
         // generation_history 기록 확인
         List<GenerationHistory> history = generationHistoryRepository.findAll();
@@ -91,9 +103,12 @@ class GenerateIntegrationTest extends IntegrationTestBase {
         assertThat(history.get(0).getActualCount()).isEqualTo(1);
 
         // SENTENCE review_item 생성 확인
-        List<ReviewItem> sentenceReviews = reviewItemRepository.findByItemTypeAndItemId(
-                "SENTENCE", sentences.get(0).getId());
-        assertThat(sentenceReviews).hasSize(1);
-        assertThat(sentenceReviews.get(0).getDirection()).isEqualTo("RECOGNITION");
+        transactionTemplate.executeWithoutResult(status -> {
+            List<GeneratedSentence> sentences = generatedSentenceRepository.findAll();
+            List<ReviewItem> sentenceReviews = reviewItemRepository.findByItemTypeAndItemId(
+                    "SENTENCE", sentences.get(0).getId());
+            assertThat(sentenceReviews).hasSize(1);
+            assertThat(sentenceReviews.get(0).getDirection()).isEqualTo("RECOGNITION");
+        });
     }
 }
