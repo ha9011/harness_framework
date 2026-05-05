@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { Page, WordListResponse } from "@/lib/types";
 import WordAddModal from "./WordAddModal";
+import AuthGuard from "../components/AuthGuard";
 
 interface FetchState {
   words: WordListResponse[];
@@ -12,7 +14,7 @@ interface FetchState {
   loading: boolean;
 }
 
-export default function WordsPage() {
+function WordsContent() {
   const [state, setState] = useState<FetchState>({
     words: [],
     totalPages: 0,
@@ -24,6 +26,7 @@ export default function WordsPage() {
   const [sort, setSort] = useState("latest");
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { user } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +59,7 @@ export default function WordsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, search, importantOnly, sort, refreshKey]);
+  }, [page, search, importantOnly, sort, refreshKey, user]);
 
   const { words, totalPages, loading } = state;
 
@@ -184,5 +187,13 @@ export default function WordsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function WordsPage() {
+  return (
+    <AuthGuard>
+      <WordsContent />
+    </AuthGuard>
   );
 }

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { ReviewCard, ReviewResultResponse } from "@/lib/types";
 import FlipCard from "../components/FlipCard";
+import AuthGuard from "../components/AuthGuard";
 
 const TABS = [
   { value: "WORD", label: "단어" },
@@ -11,7 +13,7 @@ const TABS = [
   { value: "SENTENCE", label: "문장" },
 ];
 
-export default function ReviewPage() {
+function ReviewContent() {
   const [activeTab, setActiveTab] = useState("WORD");
   const [cards, setCards] = useState<ReviewCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -21,6 +23,7 @@ export default function ReviewPage() {
   const [completedIds, setCompletedIds] = useState<number[]>([]);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +49,7 @@ export default function ReviewPage() {
       });
 
     return () => { cancelled = true; };
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   const loadCards = async (type: string, exclude: number[] = []) => {
     setLoading(true);
@@ -372,4 +375,12 @@ function CardBack({ card }: { card: ReviewCard }) {
   }
 
   return null;
+}
+
+export default function ReviewPage() {
+  return (
+    <AuthGuard>
+      <ReviewContent />
+    </AuthGuard>
+  );
 }

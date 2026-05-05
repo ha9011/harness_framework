@@ -3,15 +3,18 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { WordDetailResponse, WordResponse } from "@/lib/types";
+import AuthGuard from "../../components/AuthGuard";
 
-export default function WordDetailPage({
+function WordDetailContent({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
   const [word, setWord] = useState<WordDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,7 +33,7 @@ export default function WordDetailPage({
       }
     };
     fetchWord();
-  }, [id]);
+  }, [id, user]);
 
   const handleToggleImportant = async () => {
     if (!word) return;
@@ -148,5 +151,17 @@ export default function WordDetailPage({
         단어 삭제
       </button>
     </div>
+  );
+}
+
+export default function WordDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <AuthGuard>
+      <WordDetailContent params={params} />
+    </AuthGuard>
   );
 }

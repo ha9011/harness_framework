@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Gowun_Dodum } from "next/font/google";
 import "./globals.css";
 import BottomNav from "./components/BottomNav";
+import { AuthProvider } from "@/lib/auth-context";
 
 const gowun = Gowun_Dodum({
   weight: "400",
@@ -22,10 +23,12 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${gowun.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
-        <main className="flex-1 w-full max-w-md mx-auto pb-20 pt-10 px-4">
-          {children}
-        </main>
-        <BottomNav />
+        <AuthProvider>
+          <main className="flex-1 w-full max-w-md mx-auto pb-20 pt-10 px-4">
+            {children}
+          </main>
+          <BottomNav />
+        </AuthProvider>
       </body>
     </html>
   );

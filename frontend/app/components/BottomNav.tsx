@@ -11,8 +11,12 @@ const navItems = [
   { href: "/review", label: "복습", icon: "🃏" },
 ];
 
+const hidePaths = ['/login', '/signup'];
+
 export default function BottomNav() {
   const pathname = usePathname();
+
+  if (hidePaths.some(p => pathname.startsWith(p))) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-raised border-t border-hairline pb-7">
