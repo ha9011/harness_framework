@@ -48,7 +48,7 @@ class GeminiFallbackIntegrationTest extends IntegrationTestBase {
         assertThat(response.getBody().getPartOfSpeech()).isNull();
 
         // DB 확인
-        assertThat(wordRepository.findByDeletedFalse()).hasSize(1);
+        assertThat(wordRepository.findAll()).hasSize(1);
     }
 
     @Test

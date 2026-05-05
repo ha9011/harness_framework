@@ -1,5 +1,6 @@
 package com.english.word;
 
+import com.english.auth.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,7 +18,11 @@ public class Word {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(nullable = false)
     private String word;
 
     @Column(nullable = false)
@@ -41,7 +46,8 @@ public class Word {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public Word(String word, String meaning) {
+    public Word(User user, String word, String meaning) {
+        this.user = user;
         this.word = word;
         this.meaning = meaning;
         this.createdAt = LocalDateTime.now();

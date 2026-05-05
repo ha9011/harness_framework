@@ -1,5 +1,6 @@
 package com.english.generate;
 
+import com.english.auth.User;
 import com.english.config.GeminiException;
 import com.english.config.GlobalExceptionHandler;
 import com.english.config.NoPatternsException;
@@ -20,6 +21,7 @@ import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,11 +44,34 @@ class GenerateControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private User testUser;
+
     @BeforeEach
     void setUp() {
+        testUser = new User("test@test.com", "password", "테스터");
+        try {
+            var idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(testUser, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
         mockMvc = MockMvcBuilders.standaloneSetup(generateController)
                 .setControllerAdvice(new GlobalExceptionHandler())
-                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    @Override
+                    public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.getParameterType().isAssignableFrom(User.class);
+                    }
+                    @Override
+                    public Object resolveArgument(org.springframework.core.MethodParameter parameter,
+                            org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                            org.springframework.web.context.request.NativeWebRequest webRequest,
+                            org.springframework.web.bind.support.WebDataBinderFactory binderFactory) {
+                        return testUser;
+                    }
+                }, new PageableHandlerMethodArgumentResolver())
                 .build();
     }
 
@@ -66,7 +91,7 @@ class GenerateControllerTest {
         @Test
         @DisplayName("일반 생성 → 201")
         void generateSuccess() throws Exception {
-            given(generateService.generate(any(GenerateRequest.class))).willReturn(sampleResponse());
+            given(generateService.generate(eq(testUser), any(GenerateRequest.class))).willReturn(sampleResponse());
 
             mockMvc.perform(post("/api/generate")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -80,7 +105,7 @@ class GenerateControllerTest {
         @Test
         @DisplayName("단어 0개 → 400")
         void generateNoWords() throws Exception {
-            given(generateService.generate(any(GenerateRequest.class)))
+            given(generateService.generate(eq(testUser), any(GenerateRequest.class)))
                     .willThrow(new NoWordsException("등록된 단어가 없습니다"));
 
             mockMvc.perform(post("/api/generate")
@@ -93,7 +118,7 @@ class GenerateControllerTest {
         @Test
         @DisplayName("패턴 0개 → 400")
         void generateNoPatterns() throws Exception {
-            given(generateService.generate(any(GenerateRequest.class)))
+            given(generateService.generate(eq(testUser), any(GenerateRequest.class)))
                     .willThrow(new NoPatternsException("등록된 패턴이 없습니다"));
 
             mockMvc.perform(post("/api/generate")
@@ -106,7 +131,7 @@ class GenerateControllerTest {
         @Test
         @DisplayName("Gemini 장애 → 502")
         void generateGeminiFailure() throws Exception {
-            given(generateService.generate(any(GenerateRequest.class)))
+            given(generateService.generate(eq(testUser), any(GenerateRequest.class)))
                     .willThrow(new GeminiException("Gemini API 호출 실패"));
 
             mockMvc.perform(post("/api/generate")
@@ -124,7 +149,7 @@ class GenerateControllerTest {
         @Test
         @DisplayName("단어 지정 생성 → 201")
         void generateByWordSuccess() throws Exception {
-            given(generateService.generateByWord(eq(1L), any(GenerateRequest.class))).willReturn(sampleResponse());
+            given(generateService.generateByWord(eq(testUser), eq(1L), any(GenerateRequest.class))).willReturn(sampleResponse());
 
             mockMvc.perform(post("/api/generate/word")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -136,7 +161,7 @@ class GenerateControllerTest {
         @Test
         @DisplayName("존재하지 않는 단어 → 404")
         void generateByWordNotFound() throws Exception {
-            given(generateService.generateByWord(eq(999L), any(GenerateRequest.class)))
+            given(generateService.generateByWord(eq(testUser), eq(999L), any(GenerateRequest.class)))
                     .willThrow(new NotFoundException("단어를 찾을 수 없습니다"));
 
             mockMvc.perform(post("/api/generate/word")
@@ -154,7 +179,7 @@ class GenerateControllerTest {
         @Test
         @DisplayName("패턴 지정 생성 → 201")
         void generateByPatternSuccess() throws Exception {
-            given(generateService.generateByPattern(eq(1L), any(GenerateRequest.class))).willReturn(sampleResponse());
+            given(generateService.generateByPattern(eq(testUser), eq(1L), any(GenerateRequest.class))).willReturn(sampleResponse());
 
             mockMvc.perform(post("/api/generate/pattern")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -173,7 +198,7 @@ class GenerateControllerTest {
         void getHistorySuccess() throws Exception {
             GenerationHistoryResponse historyResponse = new GenerationHistoryResponse(
                     1L, "ELEMENTARY", 10, 10, null, null, LocalDateTime.now());
-            given(generateService.getHistory(any()))
+            given(generateService.getHistory(eq(testUser), any()))
                     .willReturn(new PageImpl<>(List.of(historyResponse), PageRequest.of(0, 20), 1));
 
             mockMvc.perform(get("/api/generate/history")

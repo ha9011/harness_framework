@@ -1,5 +1,6 @@
 package com.english.study;
 
+import com.english.auth.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,12 +20,12 @@ public class StudyRecordService {
      * 오늘 날짜 레코드가 없으면 생성, 있으면 반환
      */
     @Transactional
-    public StudyRecord getOrCreateTodayRecord() {
+    public StudyRecord getOrCreateTodayRecord(User user) {
         LocalDate today = LocalDate.now();
-        return studyRecordRepository.findByCreatedAt(today)
+        return studyRecordRepository.findByUserAndCreatedAt(user, today)
                 .orElseGet(() -> {
-                    int nextDayNumber = studyRecordRepository.findMaxDayNumber() + 1;
-                    return studyRecordRepository.save(new StudyRecord(nextDayNumber, today));
+                    int nextDayNumber = studyRecordRepository.findMaxDayNumber(user) + 1;
+                    return studyRecordRepository.save(new StudyRecord(user, nextDayNumber, today));
                 });
     }
 
@@ -41,8 +42,8 @@ public class StudyRecordService {
      * 학습 기록 목록 조회 (최신순, 페이지네이션)
      */
     @Transactional(readOnly = true)
-    public Page<StudyRecordResponse> getRecords(Pageable pageable) {
-        return studyRecordRepository.findAllByOrderByCreatedAtDesc(pageable)
+    public Page<StudyRecordResponse> getRecords(User user, Pageable pageable) {
+        return studyRecordRepository.findByUserOrderByCreatedAtDesc(user, pageable)
                 .map(record -> new StudyRecordResponse(
                         record.getId(),
                         record.getDayNumber(),

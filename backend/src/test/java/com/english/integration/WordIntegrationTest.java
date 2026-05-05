@@ -55,7 +55,7 @@ class WordIntegrationTest extends IntegrationTestBase {
         assertThat(response.getBody().getPartOfSpeech()).isEqualTo("명사");
 
         // DB 저장 확인
-        List<Word> words = wordRepository.findByDeletedFalse();
+        List<Word> words = wordRepository.findAll();
         assertThat(words).hasSize(1);
 
         // review_items 2개 생성 확인 (RECOGNITION + RECALL)

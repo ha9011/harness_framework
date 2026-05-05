@@ -1,5 +1,6 @@
 package com.english.review;
 
+import com.english.auth.User;
 import com.english.config.GlobalExceptionHandler;
 import com.english.config.NotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -37,10 +39,34 @@ class ReviewControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private User testUser;
+
     @BeforeEach
     void setUp() {
+        testUser = new User("test@test.com", "password", "테스터");
+        try {
+            var idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(testUser, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
         mockMvc = MockMvcBuilders.standaloneSetup(reviewController)
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    @Override
+                    public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.getParameterType().isAssignableFrom(User.class);
+                    }
+                    @Override
+                    public Object resolveArgument(org.springframework.core.MethodParameter parameter,
+                            org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                            org.springframework.web.context.request.NativeWebRequest webRequest,
+                            org.springframework.web.bind.support.WebDataBinderFactory binderFactory) {
+                        return testUser;
+                    }
+                })
                 .build();
     }
 
@@ -56,7 +82,7 @@ class ReviewControllerTest {
                     new ReviewCardResponse.FrontContent("hello", null, null, null, null, null),
                     new ReviewCardResponse.BackContent(null, "안녕", "명사", null, null, null, Collections.emptyList())
             );
-            given(reviewService.getTodayCards(eq("WORD"), eq(Collections.emptyList())))
+            given(reviewService.getTodayCards(eq(testUser), eq("WORD"), eq(Collections.emptyList())))
                     .willReturn(List.of(card));
 
             mockMvc.perform(get("/api/reviews/today")
@@ -71,7 +97,7 @@ class ReviewControllerTest {
         @Test
         @DisplayName("exclude 파라미터 전달")
         void getTodayCardsWithExclude() throws Exception {
-            given(reviewService.getTodayCards(eq("WORD"), eq(List.of(1L, 2L))))
+            given(reviewService.getTodayCards(eq(testUser), eq("WORD"), eq(List.of(1L, 2L))))
                     .willReturn(Collections.emptyList());
 
             mockMvc.perform(get("/api/reviews/today")
@@ -85,7 +111,7 @@ class ReviewControllerTest {
         @Test
         @DisplayName("복습 대상 없음 → 빈 배열")
         void noCardsAvailable() throws Exception {
-            given(reviewService.getTodayCards(eq("PATTERN"), eq(Collections.emptyList())))
+            given(reviewService.getTodayCards(eq(testUser), eq("PATTERN"), eq(Collections.emptyList())))
                     .willReturn(Collections.emptyList());
 
             mockMvc.perform(get("/api/reviews/today")
@@ -104,7 +130,7 @@ class ReviewControllerTest {
         void submitEasyResult() throws Exception {
             ReviewResultResponse response = new ReviewResultResponse(
                     1L, "EASY", 3, LocalDate.now().plusDays(3), 2.65, 1);
-            given(reviewService.submitResult(eq(1L), eq("EASY"))).willReturn(response);
+            given(reviewService.submitResult(eq(testUser), eq(1L), eq("EASY"))).willReturn(response);
 
             mockMvc.perform(post("/api/reviews/1")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -120,7 +146,7 @@ class ReviewControllerTest {
         @Test
         @DisplayName("존재하지 않는 ID → 404")
         void submitResultNotFound() throws Exception {
-            given(reviewService.submitResult(eq(999L), eq("EASY")))
+            given(reviewService.submitResult(eq(testUser), eq(999L), eq("EASY")))
                     .willThrow(new NotFoundException("복습 아이템을 찾을 수 없습니다."));
 
             mockMvc.perform(post("/api/reviews/999")

@@ -1,5 +1,6 @@
 package com.english.word;
 
+import com.english.auth.User;
 import com.english.config.DuplicateException;
 import com.english.config.EmptyRequestException;
 import com.english.config.GeminiClient;
@@ -56,9 +57,18 @@ class WordServiceTest {
     private WordService wordService;
 
     private WordCreateRequest createRequest;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
+        testUser = new User("test@test.com", "password", "테스터");
+        try {
+            var idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(testUser, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         createRequest = new WordCreateRequest("apple", "사과");
     }
 
@@ -70,20 +80,20 @@ class WordServiceTest {
         @DisplayName("성공 + AI 보강 호출 확인")
         void createSuccess() {
             // given
-            given(wordRepository.existsByWordAndDeletedFalse("apple")).willReturn(false);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("apple", testUser)).willReturn(false);
 
             WordEnrichment enrichment = new WordEnrichment("명사", "ˈæpəl", "fruit", "An apple a day keeps the doctor away");
             given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class))).willReturn(enrichment);
 
-            Word savedWord = new Word("apple", "사과");
+            Word savedWord = new Word(testUser, "apple", "사과");
             savedWord.enrich("명사", "ˈæpəl", "fruit", "An apple a day keeps the doctor away");
             given(wordRepository.save(any(Word.class))).willReturn(savedWord);
 
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            WordResponse response = wordService.create(createRequest);
+            WordResponse response = wordService.create(testUser, createRequest);
 
             // then
             assertThat(response.getWord()).isEqualTo("apple");
@@ -92,27 +102,27 @@ class WordServiceTest {
             assertThat(response.getPronunciation()).isEqualTo("ˈæpəl");
 
             verify(geminiClient).generateContent(anyString(), eq(WordEnrichment.class));
-            verify(studyRecordService).getOrCreateTodayRecord();
+            verify(studyRecordService).getOrCreateTodayRecord(testUser);
             verify(studyRecordService).addItem(eq(record), eq("WORD"), any());
-            verify(reviewItemService).createWordReviewItems(any());
+            verify(reviewItemService).createWordReviewItems(eq(testUser), any());
         }
 
         @Test
         @DisplayName("AI 보강 실패 → 보강 없이 저장")
         void createWithEnrichmentFailure() {
             // given
-            given(wordRepository.existsByWordAndDeletedFalse("apple")).willReturn(false);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("apple", testUser)).willReturn(false);
             given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                     .willThrow(new GeminiException("API 오류"));
 
-            Word savedWord = new Word("apple", "사과");
+            Word savedWord = new Word(testUser, "apple", "사과");
             given(wordRepository.save(any(Word.class))).willReturn(savedWord);
 
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            WordResponse response = wordService.create(createRequest);
+            WordResponse response = wordService.create(testUser, createRequest);
 
             // then
             assertThat(response.getWord()).isEqualTo("apple");
@@ -124,10 +134,10 @@ class WordServiceTest {
         @DisplayName("중복 단어 등록 → DuplicateException")
         void createDuplicate() {
             // given
-            given(wordRepository.existsByWordAndDeletedFalse("apple")).willReturn(true);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("apple", testUser)).willReturn(true);
 
             // when & then
-            assertThatThrownBy(() -> wordService.create(createRequest))
+            assertThatThrownBy(() -> wordService.create(testUser, createRequest))
                     .isInstanceOf(DuplicateException.class);
 
             verify(wordRepository, never()).save(any());
@@ -149,9 +159,9 @@ class WordServiceTest {
             );
 
             // apple은 이미 존재 (skipped)
-            given(wordRepository.existsByWordAndDeletedFalse("apple")).willReturn(true);
-            given(wordRepository.existsByWordAndDeletedFalse("banana")).willReturn(false);
-            given(wordRepository.existsByWordAndDeletedFalse("cherry")).willReturn(false);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("apple", testUser)).willReturn(true);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("banana", testUser)).willReturn(false);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("cherry", testUser)).willReturn(false);
 
             // banana 보강 성공
             WordEnrichment enrichment = new WordEnrichment("명사", "bəˈnænə", "plantain", "노란 과일");
@@ -160,9 +170,9 @@ class WordServiceTest {
             given(geminiClient.generateContent(contains("cherry"), eq(WordEnrichment.class)))
                     .willThrow(new GeminiException("API 오류"));
 
-            Word banana = new Word("banana", "바나나");
+            Word banana = new Word(testUser, "banana", "바나나");
             banana.enrich("명사", "bəˈnænə", "plantain", "노란 과일");
-            Word cherry = new Word("cherry", "체리");
+            Word cherry = new Word(testUser, "cherry", "체리");
 
             given(wordRepository.save(any(Word.class)))
                     .willAnswer(invocation -> {
@@ -171,11 +181,11 @@ class WordServiceTest {
                         return cherry;
                     });
 
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            BulkCreateResponse response = wordService.bulkCreate(requests);
+            BulkCreateResponse response = wordService.bulkCreate(testUser, requests);
 
             // then
             assertThat(response.getSaved()).isEqualTo(2);
@@ -187,7 +197,7 @@ class WordServiceTest {
         @Test
         @DisplayName("빈 배열 → EmptyRequestException")
         void bulkCreateEmpty() {
-            assertThatThrownBy(() -> wordService.bulkCreate(List.of()))
+            assertThatThrownBy(() -> wordService.bulkCreate(testUser, List.of()))
                     .isInstanceOf(EmptyRequestException.class);
         }
     }
@@ -200,13 +210,13 @@ class WordServiceTest {
         @DisplayName("페이지네이션 조회")
         void getListPaginated() {
             // given
-            Word word = new Word("apple", "사과");
+            Word word = new Word(testUser, "apple", "사과");
             Page<Word> page = new PageImpl<>(List.of(word), PageRequest.of(0, 20), 1);
-            given(wordRepository.findAllWithFilters(isNull(), isNull(), eq(false), any(Pageable.class)))
+            given(wordRepository.findAllWithFilters(eq(testUser), isNull(), isNull(), eq(false), any(Pageable.class)))
                     .willReturn(page);
 
             // when
-            Page<WordListResponse> result = wordService.getList(null, null, false, "latest", PageRequest.of(0, 20));
+            Page<WordListResponse> result = wordService.getList(testUser, null, null, false, "latest", PageRequest.of(0, 20));
 
             // then
             assertThat(result.getContent()).hasSize(1);
@@ -217,13 +227,13 @@ class WordServiceTest {
         @DisplayName("검색/필터 적용")
         void getListWithFilters() {
             // given
-            Word word = new Word("apple", "사과");
+            Word word = new Word(testUser, "apple", "사과");
             Page<Word> page = new PageImpl<>(List.of(word));
-            given(wordRepository.findAllWithFilters(eq("app"), eq("명사"), eq(true), any(Pageable.class)))
+            given(wordRepository.findAllWithFilters(eq(testUser), eq("app"), eq("명사"), eq(true), any(Pageable.class)))
                     .willReturn(page);
 
             // when
-            Page<WordListResponse> result = wordService.getList("app", "명사", true, "latest", PageRequest.of(0, 20));
+            Page<WordListResponse> result = wordService.getList(testUser, "app", "명사", true, "latest", PageRequest.of(0, 20));
 
             // then
             assertThat(result.getContent()).hasSize(1);
@@ -238,11 +248,11 @@ class WordServiceTest {
         @DisplayName("성공 + 예문 목록")
         void getDetailSuccess() {
             // given
-            Word word = new Word("apple", "사과");
-            given(wordRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(word));
+            Word word = new Word(testUser, "apple", "사과");
+            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
 
             // when
-            WordDetailResponse response = wordService.getDetail(1L);
+            WordDetailResponse response = wordService.getDetail(testUser, 1L);
 
             // then
             assertThat(response.getWord()).isEqualTo("apple");
@@ -253,10 +263,10 @@ class WordServiceTest {
         @DisplayName("존재하지 않는 ID → NotFoundException")
         void getDetailNotFound() {
             // given
-            given(wordRepository.findByIdAndDeletedFalse(999L)).willReturn(Optional.empty());
+            given(wordRepository.findByIdAndUserAndDeletedFalse(999L, testUser)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> wordService.getDetail(999L))
+            assertThatThrownBy(() -> wordService.getDetail(testUser, 999L))
                     .isInstanceOf(NotFoundException.class);
         }
     }
@@ -269,11 +279,11 @@ class WordServiceTest {
         @DisplayName("성공 — isImportant 반전")
         void toggleSuccess() {
             // given
-            Word word = new Word("apple", "사과");
-            given(wordRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(word));
+            Word word = new Word(testUser, "apple", "사과");
+            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
 
             // when
-            WordResponse response = wordService.toggleImportant(1L);
+            WordResponse response = wordService.toggleImportant(testUser, 1L);
 
             // then
             assertThat(response.isImportant()).isTrue();
@@ -288,25 +298,25 @@ class WordServiceTest {
         @DisplayName("성공 → WORD review_items만 삭제")
         void deleteSuccess() {
             // given
-            Word word = new Word("apple", "사과");
-            given(wordRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(word));
+            Word word = new Word(testUser, "apple", "사과");
+            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
 
             // when
-            wordService.delete(1L);
+            wordService.delete(testUser, 1L);
 
             // then
             assertThat(word.isDeleted()).isTrue();
-            verify(reviewItemRepository).softDeleteByItemTypeAndItemId("WORD", 1L);
+            verify(reviewItemRepository).softDeleteByUserAndItemTypeAndItemId(testUser, "WORD", 1L);
         }
 
         @Test
         @DisplayName("존재하지 않는 ID → NotFoundException")
         void deleteNotFound() {
             // given
-            given(wordRepository.findByIdAndDeletedFalse(999L)).willReturn(Optional.empty());
+            given(wordRepository.findByIdAndUserAndDeletedFalse(999L, testUser)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> wordService.delete(999L))
+            assertThatThrownBy(() -> wordService.delete(testUser, 999L))
                     .isInstanceOf(NotFoundException.class);
         }
     }
@@ -319,35 +329,35 @@ class WordServiceTest {
         @DisplayName("등록 시 study_records 자동 생성 확인")
         void studyRecordCreated() {
             // given
-            given(wordRepository.existsByWordAndDeletedFalse("apple")).willReturn(false);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("apple", testUser)).willReturn(false);
             given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                     .willThrow(new GeminiException("fail"));
-            Word savedWord = new Word("apple", "사과");
+            Word savedWord = new Word(testUser, "apple", "사과");
             given(wordRepository.save(any(Word.class))).willReturn(savedWord);
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            wordService.create(createRequest);
+            wordService.create(testUser, createRequest);
 
             // then
-            verify(studyRecordService).getOrCreateTodayRecord();
+            verify(studyRecordService).getOrCreateTodayRecord(testUser);
         }
 
         @Test
         @DisplayName("등록 시 study_record_items에 (WORD, wordId) 추가 확인")
         void studyRecordItemAdded() {
             // given
-            given(wordRepository.existsByWordAndDeletedFalse("apple")).willReturn(false);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("apple", testUser)).willReturn(false);
             given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                     .willThrow(new GeminiException("fail"));
-            Word savedWord = new Word("apple", "사과");
+            Word savedWord = new Word(testUser, "apple", "사과");
             given(wordRepository.save(any(Word.class))).willReturn(savedWord);
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            wordService.create(createRequest);
+            wordService.create(testUser, createRequest);
 
             // then
             verify(studyRecordService).addItem(eq(record), eq("WORD"), any());
@@ -357,19 +367,19 @@ class WordServiceTest {
         @DisplayName("등록 시 review_items 2개(RECOGNITION+RECALL) 생성 확인")
         void reviewItemsCreated() {
             // given
-            given(wordRepository.existsByWordAndDeletedFalse("apple")).willReturn(false);
+            given(wordRepository.existsByWordAndUserAndDeletedFalse("apple", testUser)).willReturn(false);
             given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                     .willThrow(new GeminiException("fail"));
-            Word savedWord = new Word("apple", "사과");
+            Word savedWord = new Word(testUser, "apple", "사과");
             given(wordRepository.save(any(Word.class))).willReturn(savedWord);
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            wordService.create(createRequest);
+            wordService.create(testUser, createRequest);
 
             // then
-            verify(reviewItemService).createWordReviewItems(any());
+            verify(reviewItemService).createWordReviewItems(eq(testUser), any());
         }
     }
 }
