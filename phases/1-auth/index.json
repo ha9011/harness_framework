@@ -45,7 +45,10 @@
     {
       "step": 5,
       "name": "user-data-isolation",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-05T12:48:15+0900",
+      "summary": "7개 Entity(Word, Pattern, GeneratedSentence, GenerationHistory, ReviewItem, StudyRecord, UserSetting)에 @ManyToOne User 추가. ReviewLog를 @ManyToOne ReviewItem으로 변경. Word/Pattern DB UNIQUE 제거, ReviewItem UniqueConstraint 제거. 8개 Repository User 파라미터 추가. 8개 Service IDOR 방어(findByIdAndUser) + softDelete user 조건. 7개 Controller @AuthenticationPrincipal 적용. 전체 단위 테스트 통과",
+      "completed_at": "2026-05-05T13:03:45+0900"
     },
     {
       "step": 6,
