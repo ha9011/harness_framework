@@ -61,7 +61,10 @@
     {
       "step": 7,
       "name": "frontend-auth",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-05T13:23:49+0900",
+      "summary": "api.ts credentials:include + 401 전역 핸들러, AuthProvider(Context) + AuthGuard 생성, 로그인/회원가입 페이지(목업 기반 SVG 일러스트+폼), layout.tsx에 AuthProvider 래핑(Server Component 유지), BottomNav /login,/signup 숨김, 홈 페이지 닉네임 표시, 전 페이지 AuthGuard + useEffect user 의존성 추가, FlipCard 뒷면 bg-primary-soft 적용. npm run build + lint 통과",
+      "completed_at": "2026-05-05T13:34:25+0900"
     },
     {
       "step": 8,
