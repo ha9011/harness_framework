@@ -37,7 +37,10 @@
     {
       "step": 4,
       "name": "security-config",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-05T12:45:49+0900",
+      "summary": "SecurityConfig 전면 교체(CORS+CSRF+Stateless+JwtFilter+AuthEntryPoint), JwtAuthenticationFilter(Cookie→JWT→SecurityContext), CorsConfig.java 삭제(SecurityConfig 흡수), BCryptPasswordEncoder Bean 등록. 전체 테스트 통과",
+      "completed_at": "2026-05-05T12:48:15+0900"
     },
     {
       "step": 5,
