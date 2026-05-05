@@ -1,0 +1,55 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "1-auth",
+  "steps": [
+    {
+      "step": 0,
+      "name": "deps-setup",
+      "status": "completed",
+      "started_at": "2026-05-05T12:33:58+0900",
+      "summary": "Spring Security + jjwt 의존성 추가, JWT 설정(application.yml), 임시 SecurityConfig(permitAll) 작성. 전체 빌드+테스트 통과",
+      "completed_at": "2026-05-05T12:35:48+0900"
+    },
+    {
+      "step": 1,
+      "name": "user-entity",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "jwt-provider",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "auth-service",
+      "status": "pending"
+    },
+    {
+      "step": 4,
+      "name": "security-config",
+      "status": "pending"
+    },
+    {
+      "step": 5,
+      "name": "user-data-isolation",
+      "status": "pending"
+    },
+    {
+      "step": 6,
+      "name": "integration-tests",
+      "status": "pending"
+    },
+    {
+      "step": 7,
+      "name": "frontend-auth",
+      "status": "pending"
+    },
+    {
+      "step": 8,
+      "name": "final-verification",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-05-05T12:33:58+0900"
+}
