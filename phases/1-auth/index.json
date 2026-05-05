@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "user-entity",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-05T12:35:49+0900",
+      "summary": "User Entity(@Entity users, email UNIQUE) + UserRepository(findByEmail, existsByEmail) + UserRepositoryTest 4개 테스트 통과. @DataJpaTest용 H2 의존성 추가",
+      "completed_at": "2026-05-05T12:38:29+0900"
     },
     {
       "step": 2,
