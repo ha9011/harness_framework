@@ -11,7 +11,7 @@ public class SettingService {
 
     private final UserSettingRepository userSettingRepository;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UserSettingResponse getSetting(User user) {
         UserSetting setting = getOrCreateSetting(user);
         return new UserSettingResponse(setting.getDailyReviewCount());

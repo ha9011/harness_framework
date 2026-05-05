@@ -9,11 +9,11 @@ import com.english.word.WordCreateRequest;
 import com.english.word.WordEnrichment;
 import com.english.word.WordRepository;
 import com.english.word.WordResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.List;
@@ -29,16 +29,25 @@ class GeminiFallbackIntegrationTest extends IntegrationTestBase {
     @Autowired
     private WordRepository wordRepository;
 
+    private HttpHeaders authHeaders;
+
+    @BeforeEach
+    void setUp() {
+        authHeaders = getDefaultAuthHeaders();
+    }
+
     @Test
-    @DisplayName("단��� 등록 시 Gemini 실패 → 보강 없이 저장")
+    @DisplayName("단어 등록 시 Gemini 실패 → 보강 없이 저장")
     void createWord_geminiFails_savedWithoutEnrichment() {
         // given
         given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                 .willThrow(new GeminiException("Gemini API 호출이 3회 모두 실패했습니다"));
 
         // when
-        ResponseEntity<WordResponse> response = restTemplate.postForEntity(
-                "/api/words", new WordCreateRequest("test", "테스트"), WordResponse.class);
+        ResponseEntity<WordResponse> response = restTemplate.exchange(
+                "/api/words", HttpMethod.POST,
+                new HttpEntity<>(new WordCreateRequest("test", "테스트"), authHeaders),
+                WordResponse.class);
 
         // then - 보강 없이 저장 성공
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -58,21 +67,22 @@ class GeminiFallbackIntegrationTest extends IntegrationTestBase {
         given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                 .willReturn(new WordEnrichment("명사", "/test/", "syn", "tip"));
 
-        restTemplate.postForEntity("/api/words",
-                new WordCreateRequest("hello", "안녕"), WordResponse.class);
-        restTemplate.postForEntity("/api/patterns",
-                new PatternCreateRequest("I want to ~", "~하고 싶다", List.of(
+        restTemplate.exchange("/api/words", HttpMethod.POST,
+                new HttpEntity<>(new WordCreateRequest("hello", "안녕"), authHeaders),
+                WordResponse.class);
+        restTemplate.exchange("/api/patterns", HttpMethod.POST,
+                new HttpEntity<>(new PatternCreateRequest("I want to ~", "~하고 싶다", List.of(
                         new PatternCreateRequest.ExampleRequest("I want to go", "가고 싶다")
-                )), PatternResponse.class);
+                )), authHeaders), PatternResponse.class);
 
         // 예문 생성 시 Gemini 실패
         given(geminiClient.generateContent(anyString(), eq(com.english.generate.GeminiGenerateResponse.class)))
                 .willThrow(new GeminiException("Gemini API 호출이 3회 모두 실패했습니다"));
 
         // when
-        ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
-                "/api/generate",
-                new GenerateRequest("ELEMENTARY", 10, null, null),
+        ResponseEntity<ErrorResponse> response = restTemplate.exchange(
+                "/api/generate", HttpMethod.POST,
+                new HttpEntity<>(new GenerateRequest("ELEMENTARY", 10, null, null), authHeaders),
                 ErrorResponse.class);
 
         // then

@@ -5,11 +5,11 @@ import com.english.review.ReviewItemRepository;
 import com.english.study.StudyRecordItemRepository;
 import com.english.study.StudyRecordRepository;
 import com.english.word.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.List;
@@ -35,6 +35,13 @@ class WordIntegrationTest extends IntegrationTestBase {
     @Autowired
     private StudyRecordItemRepository studyRecordItemRepository;
 
+    private HttpHeaders authHeaders;
+
+    @BeforeEach
+    void setUp() {
+        authHeaders = getDefaultAuthHeaders();
+    }
+
     @Test
     @DisplayName("단어 등록 → DB 저장 + review_items 2개 + study_record 생성")
     void createWord_fullFlow() {
@@ -45,8 +52,9 @@ class WordIntegrationTest extends IntegrationTestBase {
         WordCreateRequest request = new WordCreateRequest("hello", "안녕하세요");
 
         // when
-        ResponseEntity<WordResponse> response = restTemplate.postForEntity(
-                "/api/words", request, WordResponse.class);
+        ResponseEntity<WordResponse> response = restTemplate.exchange(
+                "/api/words", HttpMethod.POST,
+                new HttpEntity<>(request, authHeaders), WordResponse.class);
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -77,8 +85,9 @@ class WordIntegrationTest extends IntegrationTestBase {
                 .willReturn(new WordEnrichment("명사", "/test/", "syn", "tip"));
 
         // 먼저 하나 등록
-        restTemplate.postForEntity("/api/words",
-                new WordCreateRequest("apple", "사과"), WordResponse.class);
+        restTemplate.exchange("/api/words", HttpMethod.POST,
+                new HttpEntity<>(new WordCreateRequest("apple", "사과"), authHeaders),
+                WordResponse.class);
 
         // when - 벌크로 중복 포함 등록
         List<WordCreateRequest> requests = List.of(
@@ -87,8 +96,9 @@ class WordIntegrationTest extends IntegrationTestBase {
                 new WordCreateRequest("cherry", "체리")
         );
 
-        ResponseEntity<BulkCreateResponse> response = restTemplate.postForEntity(
-                "/api/words/bulk", requests, BulkCreateResponse.class);
+        ResponseEntity<BulkCreateResponse> response = restTemplate.exchange(
+                "/api/words/bulk", HttpMethod.POST,
+                new HttpEntity<>(requests, authHeaders), BulkCreateResponse.class);
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);

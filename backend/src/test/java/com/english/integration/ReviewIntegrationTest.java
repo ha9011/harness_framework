@@ -8,8 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.time.LocalDate;
@@ -29,8 +28,12 @@ class ReviewIntegrationTest extends IntegrationTestBase {
     @Autowired
     private ReviewLogRepository reviewLogRepository;
 
+    private HttpHeaders authHeaders;
+
     @BeforeEach
     void setUp() {
+        authHeaders = getDefaultAuthHeaders();
+
         given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                 .willReturn(new WordEnrichment("명사", "/test/", "syn", "tip"));
     }
@@ -39,12 +42,14 @@ class ReviewIntegrationTest extends IntegrationTestBase {
     @DisplayName("카드 선정 → SM-2 제출 → next_review_date 변경 + review_log 기록")
     void reviewFlow_sm2Applied() {
         // given - 단어 등록 (review_items 자동 생성됨)
-        restTemplate.postForEntity("/api/words",
-                new WordCreateRequest("test", "테스트"), WordResponse.class);
+        restTemplate.exchange("/api/words", HttpMethod.POST,
+                new HttpEntity<>(new WordCreateRequest("test", "테스트"), authHeaders),
+                WordResponse.class);
 
         // when - 오늘 카드 조회
-        ResponseEntity<ReviewCardResponse[]> cardsResponse = restTemplate.getForEntity(
-                "/api/reviews/today?type=WORD", ReviewCardResponse[].class);
+        ResponseEntity<ReviewCardResponse[]> cardsResponse = restTemplate.exchange(
+                "/api/reviews/today?type=WORD", HttpMethod.GET,
+                new HttpEntity<>(authHeaders), ReviewCardResponse[].class);
 
         assertThat(cardsResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(cardsResponse.getBody()).isNotNull();
@@ -54,8 +59,9 @@ class ReviewIntegrationTest extends IntegrationTestBase {
 
         // SM-2 제출 (EASY)
         ReviewResultRequest request = new ReviewResultRequest("EASY");
-        ResponseEntity<ReviewResultResponse> resultResponse = restTemplate.postForEntity(
-                "/api/reviews/" + reviewItemId, request, ReviewResultResponse.class);
+        ResponseEntity<ReviewResultResponse> resultResponse = restTemplate.exchange(
+                "/api/reviews/" + reviewItemId, HttpMethod.POST,
+                new HttpEntity<>(request, authHeaders), ReviewResultResponse.class);
 
         // then
         assertThat(resultResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -77,19 +83,22 @@ class ReviewIntegrationTest extends IntegrationTestBase {
     @DisplayName("타입별 독립 선정 확인 - WORD 조회 시 PATTERN 제외")
     void getTodayCards_typeIndependent() {
         // given - 단어 등록
-        restTemplate.postForEntity("/api/words",
-                new WordCreateRequest("word1", "단어1"), WordResponse.class);
+        restTemplate.exchange("/api/words", HttpMethod.POST,
+                new HttpEntity<>(new WordCreateRequest("word1", "단어1"), authHeaders),
+                WordResponse.class);
 
         // when - PATTERN 타입으로 조회
-        ResponseEntity<ReviewCardResponse[]> patternCards = restTemplate.getForEntity(
-                "/api/reviews/today?type=PATTERN", ReviewCardResponse[].class);
+        ResponseEntity<ReviewCardResponse[]> patternCards = restTemplate.exchange(
+                "/api/reviews/today?type=PATTERN", HttpMethod.GET,
+                new HttpEntity<>(authHeaders), ReviewCardResponse[].class);
 
         // then - 패턴이 없으므로 빈 배열
         assertThat(patternCards.getBody()).isEmpty();
 
         // WORD로 조회하면 있음
-        ResponseEntity<ReviewCardResponse[]> wordCards = restTemplate.getForEntity(
-                "/api/reviews/today?type=WORD", ReviewCardResponse[].class);
+        ResponseEntity<ReviewCardResponse[]> wordCards = restTemplate.exchange(
+                "/api/reviews/today?type=WORD", HttpMethod.GET,
+                new HttpEntity<>(authHeaders), ReviewCardResponse[].class);
         assertThat(wordCards.getBody()).isNotEmpty();
     }
 }

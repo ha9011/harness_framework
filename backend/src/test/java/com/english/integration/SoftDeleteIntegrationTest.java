@@ -12,9 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.List;
@@ -33,8 +31,12 @@ class SoftDeleteIntegrationTest extends IntegrationTestBase {
     @Autowired
     private GeneratedSentenceRepository generatedSentenceRepository;
 
+    private HttpHeaders authHeaders;
+
     @BeforeEach
     void setUp() {
+        authHeaders = getDefaultAuthHeaders();
+
         given(geminiClient.generateContent(anyString(), eq(WordEnrichment.class)))
                 .willReturn(new WordEnrichment("명사", "/test/", "syn", "tip"));
     }
@@ -43,15 +45,17 @@ class SoftDeleteIntegrationTest extends IntegrationTestBase {
     @DisplayName("단어 삭제 → WORD review_items deleted + 예문 유지 + SENTENCE review_items 유지")
     void deleteWord_reviewItemsDeletedButSentenceKept() {
         // given - 단어 등록
-        ResponseEntity<WordResponse> wordRes = restTemplate.postForEntity(
-                "/api/words", new WordCreateRequest("hello", "안녕"), WordResponse.class);
+        ResponseEntity<WordResponse> wordRes = restTemplate.exchange(
+                "/api/words", HttpMethod.POST,
+                new HttpEntity<>(new WordCreateRequest("hello", "안녕"), authHeaders),
+                WordResponse.class);
         Long wordId = wordRes.getBody().getId();
 
         // 패턴도 등록 (예문 생성에 필요)
-        restTemplate.postForEntity("/api/patterns",
-                new PatternCreateRequest("I want to ~", "~하고 싶다", List.of(
+        restTemplate.exchange("/api/patterns", HttpMethod.POST,
+                new HttpEntity<>(new PatternCreateRequest("I want to ~", "~하고 싶다", List.of(
                         new PatternCreateRequest.ExampleRequest("I want to go", "가고 싶다")
-                )), PatternResponse.class);
+                )), authHeaders), PatternResponse.class);
 
         // 예문 생성 (SENTENCE review_item 포함)
         GeminiGenerateResponse.GeminiSentence sentence = new GeminiGenerateResponse.GeminiSentence(
@@ -63,11 +67,13 @@ class SoftDeleteIntegrationTest extends IntegrationTestBase {
         given(geminiClient.generateContent(anyString(), eq(GeminiGenerateResponse.class)))
                 .willReturn(geminiResponse);
 
-        restTemplate.postForEntity("/api/generate",
-                new GenerateRequest("ELEMENTARY", 1, null, null), GenerateResponse.class);
+        restTemplate.exchange("/api/generate", HttpMethod.POST,
+                new HttpEntity<>(new GenerateRequest("ELEMENTARY", 1, null, null), authHeaders),
+                GenerateResponse.class);
 
         // when - 단어 삭제
-        restTemplate.delete("/api/words/" + wordId);
+        restTemplate.exchange("/api/words/" + wordId, HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders), Void.class);
 
         // then - WORD review_items deleted=true
         List<ReviewItem> wordItems = reviewItemRepository.findByItemTypeAndItemId("WORD", wordId);
@@ -88,14 +94,16 @@ class SoftDeleteIntegrationTest extends IntegrationTestBase {
     @DisplayName("패턴 삭제 → PATTERN review_items deleted 확인")
     void deletePattern_reviewItemsDeleted() {
         // given
-        ResponseEntity<PatternResponse> patternRes = restTemplate.postForEntity("/api/patterns",
-                new PatternCreateRequest("Let's ~", "~하자", List.of(
+        ResponseEntity<PatternResponse> patternRes = restTemplate.exchange(
+                "/api/patterns", HttpMethod.POST,
+                new HttpEntity<>(new PatternCreateRequest("Let's ~", "~하자", List.of(
                         new PatternCreateRequest.ExampleRequest("Let's go", "가자")
-                )), PatternResponse.class);
+                )), authHeaders), PatternResponse.class);
         Long patternId = patternRes.getBody().getId();
 
         // when
-        restTemplate.delete("/api/patterns/" + patternId);
+        restTemplate.exchange("/api/patterns/" + patternId, HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders), Void.class);
 
         // then
         List<ReviewItem> patternItems = reviewItemRepository.findByItemTypeAndItemId("PATTERN", patternId);

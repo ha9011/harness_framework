@@ -23,8 +23,8 @@ public interface WordRepository extends JpaRepository<Word, Long> {
     boolean existsByIdAndUser(Long id, User user);
 
     @Query("SELECT w FROM Word w WHERE w.user = :user AND w.deleted = false " +
-            "AND (:search IS NULL OR LOWER(w.word) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(w.meaning) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:search IS NULL OR LOWER(w.word) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+            "OR LOWER(w.meaning) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
             "AND (:partOfSpeech IS NULL OR w.partOfSpeech = :partOfSpeech) " +
             "AND (:importantOnly = false OR w.isImportant = true)")
     Page<Word> findAllWithFilters(
