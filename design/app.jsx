@@ -56,10 +56,12 @@ function App() {
   }, [tw.dark]);
 
   // controlled "live preview" — track navigation in one mock phone
-  const [live, setLive] = React.useState('home');
+  const [live, setLive] = React.useState('login');
   const renderLive = () => {
     const props = { theme, type, onNav: setLive };
     switch (live) {
+      case 'login': return <Login {...props} onSignup={() => setLive('signup')} />;
+      case 'signup': return <Signup {...props} onLogin={() => setLive('login')} />;
       case 'home': return <HomeA {...props} treeStage={tw.treeStage} completedCount={tw.completedTrees} wilt={tw.wilt} recovering={tw.recovering} dayInCycle={tw.dayInCycle} onStart={() => setLive('review')} />;
       case 'review': return <ReviewScreen {...props} cardStyle={tw.cardStyle} />;
       case 'words': return <WordsScreen {...props} />;
@@ -72,6 +74,7 @@ function App() {
       default: return <HomeA {...props} treeStage={tw.treeStage} onStart={() => setLive('review')} />;
     }
   };
+  const isAuth = live === 'login' || live === 'signup';
   // for the live phone, decide which nav tab is active
   const liveActiveNav = ({ home: 'home', review: 'review', words: 'words', wordDetail: 'words', patterns: 'patterns', patternDetail: 'patterns', generate: 'generate', history: 'home', settings: 'home' })[live] || 'home';
 
@@ -85,13 +88,31 @@ function App() {
               <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
                 {renderLive()}
               </div>
-              <BottomNav theme={theme} active={liveActiveNav} onNav={(k) => {
+              {!isAuth && <BottomNav theme={theme} active={liveActiveNav} onNav={(k) => {
                 if (k === 'home') setLive('home');
                 else if (k === 'words') setLive('words');
                 else if (k === 'patterns') setLive('patterns');
                 else if (k === 'generate') setLive('generate');
                 else if (k === 'review') setLive('review');
-              }} />
+              }} />}
+            </Phone>
+          </DCArtboard>
+        </DCSection>
+
+        {/* SECTION — Auth screens (Login / Signup) */}
+        <DCSection id="auth" title="🔑 로그인 · 회원가입" subtitle="창가 자리 무드 · 깔끔한 4필드 가입">
+          <DCArtboard id="login" label="로그인 · 창가 자리" width={340} height={760}>
+            <Phone theme={theme} type={type}>
+              <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+                <Login theme={theme} type={type} onSignup={() => {}}/>
+              </div>
+            </Phone>
+          </DCArtboard>
+          <DCArtboard id="signup" label="회원가입 · 기본 정보" width={340} height={760}>
+            <Phone theme={theme} type={type}>
+              <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+                <Signup theme={theme} type={type} onLogin={() => {}}/>
+              </div>
             </Phone>
           </DCArtboard>
         </DCSection>
