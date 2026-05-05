@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { Page, PatternListResponse } from "@/lib/types";
 import PatternAddModal from "./PatternAddModal";
+import AuthGuard from "../components/AuthGuard";
 
 interface FetchState {
   patterns: PatternListResponse[];
@@ -12,7 +14,7 @@ interface FetchState {
   loading: boolean;
 }
 
-export default function PatternsPage() {
+function PatternsContent() {
   const [state, setState] = useState<FetchState>({
     patterns: [],
     totalPages: 0,
@@ -21,6 +23,7 @@ export default function PatternsPage() {
   const [page, setPage] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { user } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +54,7 @@ export default function PatternsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, refreshKey]);
+  }, [page, refreshKey, user]);
 
   const { patterns, totalPages, loading } = state;
 
@@ -137,5 +140,13 @@ export default function PatternsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function PatternsPage() {
+  return (
+    <AuthGuard>
+      <PatternsContent />
+    </AuthGuard>
   );
 }

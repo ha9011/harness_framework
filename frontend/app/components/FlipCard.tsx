@@ -37,14 +37,14 @@ export default function FlipCard({ front, back, flipped, onFlip }: FlipCardProps
       >
         {/* 앞면 */}
         <div
-          className="absolute inset-0 bg-raised rounded-[20px] border border-hairline shadow-card p-5 flex flex-col justify-center items-center"
+          className="absolute inset-0 bg-raised rounded-[20px] border border-hairline shadow-md p-5 flex flex-col justify-center items-center"
           style={{ backfaceVisibility: "hidden" }}
         >
           {front}
         </div>
         {/* 뒷면 */}
         <div
-          className="absolute inset-0 bg-raised rounded-[20px] border border-hairline shadow-card p-5 flex flex-col justify-center items-center"
+          className="absolute inset-0 bg-primary-soft rounded-[20px] border border-hairline shadow-md p-5 flex flex-col justify-center items-center"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
           {back}

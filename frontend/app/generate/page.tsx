@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import AuthGuard from "../components/AuthGuard";
 import {
   GenerateResponse,
   SentenceResponse,
@@ -18,7 +19,7 @@ const LEVELS = [
 
 const COUNTS = [10, 20, 30];
 
-export default function GeneratePage() {
+function GenerateContent() {
   const [mode, setMode] = useState<"generate" | "history">("generate");
   const [level, setLevel] = useState("ELEMENTARY");
   const [count, setCount] = useState(10);
@@ -280,5 +281,13 @@ export default function GeneratePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function GeneratePage() {
+  return (
+    <AuthGuard>
+      <GenerateContent />
+    </AuthGuard>
   );
 }

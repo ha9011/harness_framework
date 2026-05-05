@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { Page, StudyRecordDto } from "@/lib/types";
+import AuthGuard from "../components/AuthGuard";
 
-export default function HistoryPage() {
+function HistoryContent() {
   const [records, setRecords] = useState<StudyRecordDto[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +37,7 @@ export default function HistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [page]);
+  }, [page, user]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -101,5 +104,13 @@ export default function HistoryPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <AuthGuard>
+      <HistoryContent />
+    </AuthGuard>
   );
 }

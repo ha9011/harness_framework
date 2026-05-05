@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { UserSettingResponse } from "@/lib/types";
+import AuthGuard from "../components/AuthGuard";
 
 const REVIEW_COUNT_OPTIONS = [10, 20, 30];
 
-export default function SettingsPage() {
+function SettingsContent() {
   const [dailyReviewCount, setDailyReviewCount] = useState(10);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     api
@@ -19,7 +22,7 @@ export default function SettingsPage() {
       .then((data) => setDailyReviewCount(data.dailyReviewCount))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -90,5 +93,13 @@ export default function SettingsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <AuthGuard>
+      <SettingsContent />
+    </AuthGuard>
   );
 }

@@ -3,15 +3,18 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { PatternDetailResponse } from "@/lib/types";
+import AuthGuard from "../../components/AuthGuard";
 
-export default function PatternDetailPage({
+function PatternDetailContent({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
   const [pattern, setPattern] = useState<PatternDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,7 +33,7 @@ export default function PatternDetailPage({
       }
     };
     fetchPattern();
-  }, [id]);
+  }, [id, user]);
 
   const handleDelete = async () => {
     if (!confirm("정말 삭제하시겠습니까?")) return;
@@ -105,5 +108,17 @@ export default function PatternDetailPage({
         패턴 삭제
       </button>
     </div>
+  );
+}
+
+export default function PatternDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <AuthGuard>
+      <PatternDetailContent params={params} />
+    </AuthGuard>
   );
 }

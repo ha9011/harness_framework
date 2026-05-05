@@ -3,20 +3,25 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { DashboardResponse } from "@/lib/types";
 import CoffeeTree from "./components/CoffeeTree";
+import AuthGuard from "./components/AuthGuard";
 
-export default function Home() {
+function HomeContent() {
+  const { user } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     api
       .get<DashboardResponse>("/dashboard")
-      .then(setDashboard)
-      .catch(() => setDashboard(null))
-      .finally(() => setLoading(false));
-  }, []);
+      .then((data) => { if (!cancelled) setDashboard(data); })
+      .catch(() => { if (!cancelled) setDashboard(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [user]);
 
   if (loading) {
     return (
@@ -55,7 +60,7 @@ export default function Home() {
       <div>
         <p className="text-xs text-ink-muted">오늘도 한 모금 천천히</p>
         <h1 className="text-lg font-semibold text-ink tracking-tight mt-1">
-          Cozy Cafe
+          {user?.nickname}님 안녕하세요
         </h1>
       </div>
 
@@ -216,5 +221,13 @@ export default function Home() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <AuthGuard>
+      <HomeContent />
+    </AuthGuard>
   );
 }

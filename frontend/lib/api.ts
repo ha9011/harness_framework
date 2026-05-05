@@ -21,6 +21,7 @@ async function request<T>(
   options?: RequestInit
 ): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -28,6 +29,13 @@ async function request<T>(
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      if (!path.includes('/auth/me')) {
+        window.dispatchEvent(new Event('unauthorized'));
+      }
+      throw new ApiError('UNAUTHORIZED', '인증이 필요합니다', 401);
+    }
+
     const error: ErrorResponse = await res.json().catch(() => ({
       code: "UNKNOWN",
       message: res.statusText,
@@ -58,10 +66,16 @@ export const api = {
 async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
+    credentials: "include",
     body: formData,
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      window.dispatchEvent(new Event('unauthorized'));
+      throw new ApiError('UNAUTHORIZED', '인증이 필요합니다', 401);
+    }
+
     const error: ErrorResponse = await res.json().catch(() => ({
       code: "UNKNOWN",
       message: res.statusText,
