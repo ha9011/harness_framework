@@ -15,3 +15,7 @@ spring:
 
 gemini:
   api-key: ${GEMINI_API_KEY:}
+
+jwt:
+  secret: ${JWT_SECRET:dev-secret-key-that-is-at-least-32-characters-long}
+  expiration: 86400000

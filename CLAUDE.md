@@ -26,6 +26,7 @@ cd frontend && npm run lint         # ESLint
 
 ## 환경 설정
 - Gemini API 키: 환경 변수 `GEMINI_API_KEY`로 주입. backend/src/main/resources/application.yml에서 `${GEMINI_API_KEY}` 참조
+- JWT Secret: 환경 변수 `JWT_SECRET`로 주입. application.yml에서 `${JWT_SECRET}` 참조. 미설정 시 개발용 기본값 사용
 - DB 스키마: `spring.jpa.hibernate.ddl-auto=update` (개발). JPA Entity 기반 자동 생성
 - CORS: CorsConfig.java에서 localhost:3000 허용 (개발 환경)
 - Gemini 재시도: 총 3회 시도 (즉시 → 1초 후 → 3초 후). 3회 모두 실패 시 fallback

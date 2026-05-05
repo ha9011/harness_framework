@@ -3,6 +3,7 @@
 ## 기본 정보
 - Base URL: `/api`
 - 응답 형식: JSON
+- 인증: JWT (HttpOnly Cookie). `/api/auth/signup`, `/api/auth/login` 외 모든 API는 인증 필수
 - 삭제: 모두 soft delete
 - 페이지네이션: 목록 API는 `page` (0부터), `size` (기본 20) 파라미터 지원
 
@@ -34,7 +35,81 @@
 | 빈 배열 요청 | 400 | EMPTY_REQUEST |
 | 단어 없음 (예문 생성 시) | 400 | NO_WORDS |
 | 패턴 없음 (예문 생성 시) | 400 | NO_PATTERNS |
+| 미인증 | 401 | UNAUTHORIZED |
+| 권한 없음 (IDOR) | 403 | FORBIDDEN |
 | 서버 내부 오류 | 500 | INTERNAL_ERROR |
+
+---
+
+## 0. 인증 API
+
+> 인증 불필요 엔드포인트. 나머지 모든 API는 인증 필수 (Cookie에 JWT 자동 전송)
+
+### POST /api/auth/signup
+회원가입 + 자동 로그인
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "nickname": "혜진"
+}
+```
+
+**Response:** `201 Created` + `Set-Cookie: token=<jwt>; HttpOnly; Path=/api; SameSite=Lax; Max-Age=86400`
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "nickname": "혜진"
+}
+```
+
+**에러:**
+- 이메일 중복: `409 DUPLICATE`
+- 비밀번호 8글자 미만: `400 BAD_REQUEST`
+
+### POST /api/auth/login
+로그인
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response:** `200 OK` + `Set-Cookie: token=<jwt>; HttpOnly; Path=/api; SameSite=Lax; Max-Age=86400`
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "nickname": "혜진"
+}
+```
+
+**에러:** `401 UNAUTHORIZED` — "이메일 또는 비밀번호가 올바르지 않습니다" (이메일/비밀번호 구분 금지)
+
+### POST /api/auth/logout
+로그아웃 (Cookie 삭제)
+
+**Response:** `204 No Content` + `Set-Cookie: token=; HttpOnly; Path=/api; Max-Age=0`
+
+### GET /api/auth/me
+현재 로그인 사용자 정보 조회
+
+**Response:** `200 OK`
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "nickname": "혜진"
+}
+```
+
+**에러:** `401 UNAUTHORIZED` (미로그인)
 
 ---
 

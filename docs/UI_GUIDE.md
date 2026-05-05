@@ -127,3 +127,38 @@ warm: bg-primarySoft text-primaryDeep
 [🏠 홈] [📖 단어] [🔤 패턴] [✨ 생성] [🃏 복습]
 학습 기록, 설정은 홈 화면 내 링크로 접근
 ```
+
+## 로그인/회원가입 페이지
+
+> 목업: `design/screens-auth.jsx` 참조
+
+### 공통
+- 하단 네비게이션 숨김 (BottomNav 미표시)
+- 중앙 정렬, max-w-md 유지
+- 입력 필드: `bg-raised rounded-[14px] border border-hairline px-3.5 py-3` + 좌측 아이콘 (메일/자물쇠/사람) — 기존 페이지(bg-soft, rounded-12)와 의도적으로 다름. 인증 페이지는 카페 느낌 강조
+- 에러 상태: `border-warn` + `shadow-[0_0_0_3px_rgba(199,126,71,0.13)]` + `text-warn text-xs`
+- 제출 버튼: Primary 버튼 lg (`bg-primary text-white rounded-[14px] h-[48px] text-[15px]`)
+- 소셜 로그인 (Google/카카오): 이번 Phase 미구현, 향후 추가 가능
+
+### 로그인 페이지 (/login)
+- 상단 일러스트: 창가 SVG (카페 분위기, 세이지 그린 나무 + 커피잔)
+- 카피: "같은 자리, 같은 잔으로 다시 시작해요" (serif italic)
+- 이메일 입력 (메일 아이콘)
+- 비밀번호 입력 (자물쇠 아이콘 + 눈 토글)
+- "로그인" 버튼 (Primary lg)
+- 하단: "계정이 없나요? 회원가입 →" → /signup
+
+### 회원가입 페이지 (/signup)
+- TopBar: "회원가입" + 뒤로가기 버튼 (→ /login)
+- 카피: "처음 오신 걸 환영해요" (serif italic) + "기본 정보만 알려주세요"
+- 닉네임 입력 (라벨 + 사람 아이콘)
+- 이메일 입력 (라벨 + 메일 아이콘)
+- 비밀번호 입력 (라벨 + 자물쇠 아이콘 + 눈 토글, 최소 8글자 힌트)
+- 비밀번호 확인 (라벨 + 자물쇠 아이콘 + 일치 시 세이지 체크 뱃지)
+- "가입하기" 버튼 (Primary lg)
+- 하단: "이미 회원이신가요? 로그인" → /login
+
+### 홈 페이지 인사 영역 변경
+- 기존: "Cozy Cafe"
+- 변경: "{닉네임}님 안녕하세요"
+- 부제: "오늘도 한 모금 천천히" 유지

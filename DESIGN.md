@@ -16,6 +16,7 @@
 | 백엔드 | Spring Boot + JPA | `backend/` 폴더 |
 | DB | PostgreSQL 16 | Docker 컨테이너 |
 | AI | Gemini API | Vision + Text Generation |
+| 인증 | Spring Security + JWT (HttpOnly Cookie) | BCrypt, 24시간 만료 |
 | 테스트 | JUnit5 + MockMvc + TestContainers | TDD |
 
 ## 사용 흐름
@@ -58,11 +59,21 @@
 
 ## DB 스키마
 
+### users (Phase 1-auth)
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | BIGSERIAL PK | |
+| email | VARCHAR(255) UNIQUE | 이메일 |
+| password | VARCHAR(255) | BCrypt 해시 |
+| nickname | VARCHAR(50) | 닉네임 |
+| created_at | TIMESTAMP | |
+
 ### words
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | BIGSERIAL PK | |
-| word | VARCHAR(200) UNIQUE | 단어 또는 표현 — 사용자 입력, 중복 방지 |
+| user_id | BIGINT FK → users.id | 소유자 |
+| word | VARCHAR(200) | 단어 또는 표현 — 앱 레벨 중복 검증 (사용자별, DB UNIQUE 제거) |
 | meaning | VARCHAR(500) | 한국어 뜻 — 사용자 입력 |
 | part_of_speech | VARCHAR(50) | 품사 — AI 보강 |
 | pronunciation | VARCHAR(200) | 발음 — AI 보강 |
@@ -79,7 +90,8 @@
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | BIGSERIAL PK | |
-| template | VARCHAR(255) UNIQUE | 패턴 (예: "I'm afraid that..."), 중복 방지 |
+| user_id | BIGINT FK → users.id | 소유자 |
+| template | VARCHAR(255) | 패턴 — 앱 레벨 중복 검증 (사용자별, DB UNIQUE 제거) |
 | description | VARCHAR(500) | 한국어 설명 |
 | deleted | BOOLEAN DEFAULT false | soft delete |
 | created_at | TIMESTAMP | |
@@ -98,6 +110,7 @@
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | BIGSERIAL PK | |
+| user_id | BIGINT FK → users.id | 소유자 |
 | level | VARCHAR(10) | 유아/초등/중등/고등 |
 | requested_count | INT | 요청한 생성 개수 |
 | actual_count | INT | 실제 생성된 개수 |
@@ -109,6 +122,7 @@
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | BIGSERIAL PK | |
+| user_id | BIGINT FK → users.id | 소유자 |
 | generation_id | BIGINT FK → generation_history.id | 어떤 생성 요청에서 만들어졌는지 |
 | pattern_id | BIGINT FK nullable | 사용된 패턴 (단어만 생성 시 null) |
 | sentence | TEXT | 생성된 영어 예문 |
@@ -137,7 +151,8 @@
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | BIGSERIAL PK | |
-| study_date | DATE UNIQUE | 학습 날짜 (하루에 하나) |
+| user_id | BIGINT FK → users.id | 소유자 |
+| study_date | DATE | 학습 날짜 (사용자+날짜별 하나) |
 | day_number | INT | 총 학습일 기준 몇 일차 |
 | created_at | TIMESTAMP | |
 
@@ -158,6 +173,7 @@
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | BIGSERIAL PK | |
+| user_id | BIGINT FK → users.id | 소유자 |
 | item_type | VARCHAR(20) | WORD / PATTERN / SENTENCE |
 | item_id | BIGINT | 해당 타입의 ID |
 | direction | VARCHAR(15) DEFAULT 'RECOGNITION' | RECOGNITION(영→한) / RECALL(한→영). **SENTENCE는 RECOGNITION만** |
@@ -169,7 +185,7 @@
 | last_result | VARCHAR(10) | 마지막 응답 (EASY/MEDIUM/HARD, 초기 null) |
 | last_reviewed_at | TIMESTAMP | |
 | created_at | TIMESTAMP | |
-| UNIQUE(item_type, item_id, direction) | | 중복 생성 방지 (같은 단어라도 방향별로 1개씩) |
+| ~~UNIQUE(item_type, item_id, direction)~~ | | DB UNIQUE 제거 → 앱 레벨 검증 (사용자별, soft delete 호환) |
 
 **인덱스:**
 - `review_items(next_review_date)` — 매일 복습 카드 선정
@@ -190,8 +206,9 @@
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | id | BIGSERIAL PK | |
-| setting_key | VARCHAR(50) UNIQUE | 설정 키 (예: "daily_review_count") |
-| setting_value | VARCHAR(200) | 설정 값 (예: "20") |
+| user_id | BIGINT FK → users.id | 소유자 |
+| daily_review_count | INT DEFAULT 10 | 하루 복습 개수 |
+| created_at | TIMESTAMP | |
 | updated_at | TIMESTAMP | |
 
 ## REST API
@@ -413,6 +430,13 @@ harness_framework/
 ├── backend/
 │   └── src/main/java/com/english/
 │       ├── EnglishApplication.java
+│       ├── auth/
+│       │   ├── User.java                  (Entity)
+│       │   ├── UserRepository.java
+│       │   ├── AuthService.java
+│       │   ├── AuthController.java
+│       │   ├── JwtProvider.java
+│       │   └── JwtAuthenticationFilter.java
 │       ├── word/
 │       │   ├── Word.java                  (Entity)
 │       │   ├── WordRepository.java        (JPA Repository)
@@ -456,12 +480,16 @@ harness_framework/
 │       │   ├── UserSettingService.java
 │       │   └── UserSettingController.java
 │       └── config/
-│           ├── CorsConfig.java
+│           ├── SecurityConfig.java        (CORS 통합, CorsConfig.java 흡수)
 │           └── GlobalExceptionHandler.java
 ├── frontend/
 │   └── app/
-│       ├── layout.tsx
-│       ├── page.tsx                       (홈 대시보드)
+│       ├── layout.tsx                     (AuthProvider 래핑)
+│       ├── page.tsx                       (홈 대시보드, 닉네임 표시)
+│       ├── login/
+│       │   └── page.tsx                   (로그인)
+│       ├── signup/
+│       │   └── page.tsx                   (회원가입)
 │       ├── words/
 │       │   ├── page.tsx                   (단어 목록+등록)
 │       │   └── [id]/page.tsx             (단어 상세)
@@ -483,7 +511,8 @@ harness_framework/
 │       │   ├── FlipCard.tsx
 │       │   └── SentenceCard.tsx
 │       └── lib/
-│           └── api.ts                     (백엔드 API 호출)
+│           ├── api.ts                     (백엔드 API 호출, credentials: include)
+│           └── auth-context.tsx           (AuthProvider, useAuth hook)
 ```
 
 ## Docker 설정
@@ -509,6 +538,7 @@ volumes:
 ## 백엔드 패키지 구조
 ```
 com.english/
+├── auth/        (User, UserRepository, AuthService, AuthController, JwtProvider, JwtAuthenticationFilter)
 ├── word/        (Word, WordRepository, WordService, WordController, WordDto)
 ├── pattern/     (Pattern, PatternExample, PatternRepository, PatternService, PatternController, PatternDto)
 ├── generate/    (GenerationHistory, GeneratedSentence, GeneratedSentenceWord, SentenceSituation, GenerateService, GenerateController, GeminiClient)
@@ -516,7 +546,7 @@ com.english/
 ├── study/       (StudyRecord, StudyRecordItem, StudyRecordRepository, StudyRecordService, StudyRecordController)
 ├── dashboard/   (DashboardService, DashboardController)
 ├── setting/     (UserSetting, UserSettingRepository, UserSettingService, UserSettingController)
-└── config/      (CorsConfig, GlobalExceptionHandler)
+└── config/      (SecurityConfig, GlobalExceptionHandler)
 ```
 
 ## 프론트엔드 페이지
@@ -596,6 +626,7 @@ com.english/
 14. Gemini API 실패 시 fallback 동작 확인
 
 ## MVP 제외 (향후)
+- 닉네임/비밀번호 변경
 - TTS/STT 말하기 기능 (Web Speech API, 비용 0)
 - 퀴즈/빈칸 테스트
 - 즐겨찾기
