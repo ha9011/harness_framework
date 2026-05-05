@@ -1,5 +1,6 @@
 package com.english.word;
 
+import com.english.auth.User;
 import com.english.config.DuplicateException;
 import com.english.config.EmptyRequestException;
 import com.english.config.GlobalExceptionHandler;
@@ -22,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,11 +52,34 @@ class WordControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private User testUser;
+
     @BeforeEach
     void setUp() {
+        testUser = new User("test@test.com", "password", "테스터");
+        try {
+            var idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(testUser, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
         mockMvc = MockMvcBuilders.standaloneSetup(wordController)
                 .setControllerAdvice(new GlobalExceptionHandler())
-                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    @Override
+                    public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.getParameterType().isAssignableFrom(User.class);
+                    }
+                    @Override
+                    public Object resolveArgument(org.springframework.core.MethodParameter parameter,
+                            org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                            org.springframework.web.context.request.NativeWebRequest webRequest,
+                            org.springframework.web.bind.support.WebDataBinderFactory binderFactory) {
+                        return testUser;
+                    }
+                }, new PageableHandlerMethodArgumentResolver())
                 .build();
     }
 
@@ -67,7 +92,7 @@ class WordControllerTest {
         void createSuccess() throws Exception {
             WordResponse response = new WordResponse(1L, "apple", "사과", "명사", "ˈæpəl",
                     "fruit", "tip", false, LocalDateTime.now());
-            given(wordService.create(any(WordCreateRequest.class))).willReturn(response);
+            given(wordService.create(eq(testUser), any(WordCreateRequest.class))).willReturn(response);
 
             mockMvc.perform(post("/api/words")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -81,7 +106,7 @@ class WordControllerTest {
         @Test
         @DisplayName("중복 등록 → 409")
         void createDuplicate() throws Exception {
-            given(wordService.create(any(WordCreateRequest.class)))
+            given(wordService.create(eq(testUser), any(WordCreateRequest.class)))
                     .willThrow(new DuplicateException("이미 등록된 단어입니다"));
 
             mockMvc.perform(post("/api/words")
@@ -100,7 +125,7 @@ class WordControllerTest {
         @DisplayName("벌크 등록 성공 → 201")
         void bulkCreateSuccess() throws Exception {
             BulkCreateResponse response = new BulkCreateResponse(2, 1, 0, List.of());
-            given(wordService.bulkCreate(anyList())).willReturn(response);
+            given(wordService.bulkCreate(eq(testUser), anyList())).willReturn(response);
 
             mockMvc.perform(post("/api/words/bulk")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -113,7 +138,7 @@ class WordControllerTest {
         @Test
         @DisplayName("빈 배열 → 400")
         void bulkCreateEmpty() throws Exception {
-            given(wordService.bulkCreate(anyList()))
+            given(wordService.bulkCreate(eq(testUser), anyList()))
                     .willThrow(new EmptyRequestException("등록할 단어가 없습니다"));
 
             mockMvc.perform(post("/api/words/bulk")
@@ -132,7 +157,7 @@ class WordControllerTest {
         @DisplayName("목록 조회 → 200")
         void getListSuccess() throws Exception {
             WordListResponse item = new WordListResponse(1L, "apple", "사과", "명사", false, LocalDateTime.now());
-            given(wordService.getList(any(), any(), anyBoolean(), any(), any()))
+            given(wordService.getList(eq(testUser), any(), any(), anyBoolean(), any(), any()))
                     .willReturn(new PageImpl<>(List.of(item), PageRequest.of(0, 20), 1));
 
             mockMvc.perform(get("/api/words")
@@ -152,7 +177,7 @@ class WordControllerTest {
         void getDetailSuccess() throws Exception {
             WordDetailResponse response = new WordDetailResponse(1L, "apple", "사과", "명사",
                     "ˈæpəl", "fruit", "tip", false, LocalDateTime.now(), List.of());
-            given(wordService.getDetail(1L)).willReturn(response);
+            given(wordService.getDetail(testUser, 1L)).willReturn(response);
 
             mockMvc.perform(get("/api/words/1"))
                     .andExpect(status().isOk())
@@ -163,7 +188,7 @@ class WordControllerTest {
         @Test
         @DisplayName("존재하지 않는 ID → 404")
         void getDetailNotFound() throws Exception {
-            given(wordService.getDetail(999L))
+            given(wordService.getDetail(testUser, 999L))
                     .willThrow(new NotFoundException("단어를 찾을 수 없습니다"));
 
             mockMvc.perform(get("/api/words/999"))
@@ -181,7 +206,7 @@ class WordControllerTest {
         void toggleSuccess() throws Exception {
             WordResponse response = new WordResponse(1L, "apple", "사과", "명사", "ˈæpəl",
                     "fruit", "tip", true, LocalDateTime.now());
-            given(wordService.toggleImportant(1L)).willReturn(response);
+            given(wordService.toggleImportant(testUser, 1L)).willReturn(response);
 
             mockMvc.perform(patch("/api/words/1/important"))
                     .andExpect(status().isOk())
@@ -196,7 +221,7 @@ class WordControllerTest {
         @Test
         @DisplayName("삭제 → 204")
         void deleteSuccess() throws Exception {
-            doNothing().when(wordService).delete(1L);
+            doNothing().when(wordService).delete(testUser, 1L);
 
             mockMvc.perform(delete("/api/words/1"))
                     .andExpect(status().isNoContent());
@@ -206,7 +231,7 @@ class WordControllerTest {
         @DisplayName("존재하지 않는 ID → 404")
         void deleteNotFound() throws Exception {
             doThrow(new NotFoundException("단어를 찾을 수 없습니다"))
-                    .when(wordService).delete(999L);
+                    .when(wordService).delete(testUser, 999L);
 
             mockMvc.perform(delete("/api/words/999"))
                     .andExpect(status().isNotFound())

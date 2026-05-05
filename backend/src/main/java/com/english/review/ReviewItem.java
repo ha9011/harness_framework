@@ -1,5 +1,6 @@
 package com.english.review;
 
+import com.english.auth.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -9,8 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "review_items",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"item_type", "item_id", "direction"}))
+@Table(name = "review_items")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ReviewItem {
@@ -18,6 +18,10 @@ public class ReviewItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "item_type", nullable = false)
     private String itemType;
@@ -49,7 +53,8 @@ public class ReviewItem {
     @Column(name = "last_reviewed_at")
     private LocalDateTime lastReviewedAt;
 
-    public ReviewItem(String itemType, Long itemId, String direction) {
+    public ReviewItem(User user, String itemType, Long itemId, String direction) {
+        this.user = user;
         this.itemType = itemType;
         this.itemId = itemId;
         this.direction = direction;
@@ -85,7 +90,7 @@ public class ReviewItem {
         this.lastResult = result;
         this.lastReviewedAt = LocalDateTime.now();
 
-        return new ReviewLog(this.id, result, previousInterval, this.intervalDays,
+        return new ReviewLog(this, result, previousInterval, this.intervalDays,
                 previousEaseFactor, this.easeFactor);
     }
 }

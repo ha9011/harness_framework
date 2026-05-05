@@ -1,5 +1,6 @@
 package com.english.review;
 
+import com.english.auth.User;
 import com.english.config.NotFoundException;
 import com.english.generate.GeneratedSentence;
 import com.english.generate.GeneratedSentenceRepository;
@@ -55,13 +56,27 @@ class ReviewServiceTest {
     @InjectMocks
     private ReviewService reviewService;
 
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User("test@test.com", "password", "테스터");
+        try {
+            var idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(testUser, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Nested
     @DisplayName("카드 선정 - getTodayCards")
     class GetTodayCards {
 
         @BeforeEach
         void setUp() {
-            given(settingService.getSetting()).willReturn(new UserSettingResponse(10));
+            given(settingService.getSetting(testUser)).willReturn(new UserSettingResponse(10));
         }
 
         @Test
@@ -69,15 +84,15 @@ class ReviewServiceTest {
         void wordTypeOnly() {
             // given
             ReviewItem wordItem = createReviewItem(1L, "WORD", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq("WORD"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList()))
                     .willReturn(List.of(wordItem));
 
-            Word word = new Word("hello", "안녕");
-            given(wordRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(word));
+            Word word = new Word(testUser, "hello", "안녕");
+            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
             given(generatedSentenceRepository.findByWordId(1L)).willReturn(Collections.emptyList());
 
             // when
-            List<ReviewCardResponse> result = reviewService.getTodayCards("WORD", Collections.emptyList());
+            List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "WORD", Collections.emptyList());
 
             // then
             assertThat(result).hasSize(1);
@@ -89,15 +104,15 @@ class ReviewServiceTest {
         void patternTypeOnly() {
             // given
             ReviewItem patternItem = createReviewItem(2L, "PATTERN", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq("PATTERN"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("PATTERN"), any(LocalDate.class), anyList()))
                     .willReturn(List.of(patternItem));
 
-            Pattern pattern = new Pattern("I want to ~", "~하고 싶다");
+            Pattern pattern = new Pattern(testUser, "I want to ~", "~하고 싶다");
             setId(pattern, 1L);
-            given(patternRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(pattern));
+            given(patternRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(pattern));
 
             // when
-            List<ReviewCardResponse> result = reviewService.getTodayCards("PATTERN", Collections.emptyList());
+            List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "PATTERN", Collections.emptyList());
 
             // then
             assertThat(result).hasSize(1);
@@ -109,16 +124,16 @@ class ReviewServiceTest {
         void sentenceTypeOnly() {
             // given
             ReviewItem sentenceItem = createReviewItem(3L, "SENTENCE", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq("SENTENCE"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("SENTENCE"), any(LocalDate.class), anyList()))
                     .willReturn(List.of(sentenceItem));
 
-            GeneratedSentence sentence = new GeneratedSentence("Hello world", "안녕 세상", "ELEMENTARY");
+            GeneratedSentence sentence = new GeneratedSentence(testUser, "Hello world", "안녕 세상", "ELEMENTARY");
             sentence.addSituation("카페에서 친구에게 인사할 때");
             setId(sentence, 1L);
             given(generatedSentenceRepository.findById(1L)).willReturn(Optional.of(sentence));
 
             // when
-            List<ReviewCardResponse> result = reviewService.getTodayCards("SENTENCE", Collections.emptyList());
+            List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "SENTENCE", Collections.emptyList());
 
             // then
             assertThat(result).hasSize(1);
@@ -129,11 +144,11 @@ class ReviewServiceTest {
         @DisplayName("복습 대상 0개 → 빈 배열 반환")
         void emptyResult() {
             // given
-            given(reviewItemRepository.findTodayCards(eq("WORD"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList()))
                     .willReturn(Collections.emptyList());
 
             // when
-            List<ReviewCardResponse> result = reviewService.getTodayCards("WORD", Collections.emptyList());
+            List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "WORD", Collections.emptyList());
 
             // then
             assertThat(result).isEmpty();
@@ -144,15 +159,15 @@ class ReviewServiceTest {
         void excludeCards() {
             // given
             List<Long> exclude = List.of(1L, 2L);
-            given(reviewItemRepository.findTodayCards(eq("WORD"), any(LocalDate.class), eq(exclude)))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), eq(exclude)))
                     .willReturn(Collections.emptyList());
 
             // when
-            List<ReviewCardResponse> result = reviewService.getTodayCards("WORD", exclude);
+            List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "WORD", exclude);
 
             // then
             assertThat(result).isEmpty();
-            verify(reviewItemRepository).findTodayCards("WORD", LocalDate.now(), exclude);
+            verify(reviewItemRepository).findTodayCards(testUser, "WORD", LocalDate.now(), exclude);
         }
 
         @Test
@@ -160,10 +175,10 @@ class ReviewServiceTest {
         void sentenceCardHasSituation() {
             // given
             ReviewItem sentenceItem = createReviewItem(3L, "SENTENCE", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq("SENTENCE"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("SENTENCE"), any(LocalDate.class), anyList()))
                     .willReturn(List.of(sentenceItem));
 
-            GeneratedSentence sentence = new GeneratedSentence("I want coffee", "커피 주세요", "ELEMENTARY");
+            GeneratedSentence sentence = new GeneratedSentence(testUser, "I want coffee", "커피 주세요", "ELEMENTARY");
             sentence.addSituation("카페에서 주문할 때");
             sentence.addSituation("아침에 눈 뜨자마자");
             sentence.addSituation("회의 중 졸릴 때");
@@ -171,7 +186,7 @@ class ReviewServiceTest {
             given(generatedSentenceRepository.findById(1L)).willReturn(Optional.of(sentence));
 
             // when
-            List<ReviewCardResponse> result = reviewService.getTodayCards("SENTENCE", Collections.emptyList());
+            List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "SENTENCE", Collections.emptyList());
 
             // then
             assertThat(result.get(0).getFront().getSituation()).isNotNull();
@@ -184,21 +199,21 @@ class ReviewServiceTest {
         void wordRecognitionBackExamples() {
             // given
             ReviewItem wordItem = createReviewItem(1L, "WORD", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq("WORD"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList()))
                     .willReturn(List.of(wordItem));
 
-            Word word = new Word("hello", "안녕");
-            given(wordRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(word));
+            Word word = new Word(testUser, "hello", "안녕");
+            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
 
             // 4개 예문 생성 → 최대 3개 반환
-            GeneratedSentence s1 = new GeneratedSentence("Hello there", "안녕 거기", "ELEMENTARY");
-            GeneratedSentence s2 = new GeneratedSentence("Hello world", "안녕 세상", "ELEMENTARY");
-            GeneratedSentence s3 = new GeneratedSentence("Hello friend", "안녕 친구", "ELEMENTARY");
-            GeneratedSentence s4 = new GeneratedSentence("Hello again", "또 안녕", "ELEMENTARY");
+            GeneratedSentence s1 = new GeneratedSentence(testUser, "Hello there", "안녕 거기", "ELEMENTARY");
+            GeneratedSentence s2 = new GeneratedSentence(testUser, "Hello world", "안녕 세상", "ELEMENTARY");
+            GeneratedSentence s3 = new GeneratedSentence(testUser, "Hello friend", "안녕 친구", "ELEMENTARY");
+            GeneratedSentence s4 = new GeneratedSentence(testUser, "Hello again", "또 안녕", "ELEMENTARY");
             given(generatedSentenceRepository.findByWordId(1L)).willReturn(List.of(s1, s2, s3, s4));
 
             // when
-            List<ReviewCardResponse> result = reviewService.getTodayCards("WORD", Collections.emptyList());
+            List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "WORD", Collections.emptyList());
 
             // then
             assertThat(result.get(0).getBack().getExamples()).hasSize(3);
@@ -209,18 +224,18 @@ class ReviewServiceTest {
         void wordRecognitionBackExamplesLessThan3() {
             // given
             ReviewItem wordItem = createReviewItem(1L, "WORD", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq("WORD"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList()))
                     .willReturn(List.of(wordItem));
 
-            Word word = new Word("hello", "안녕");
-            given(wordRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(word));
+            Word word = new Word(testUser, "hello", "안녕");
+            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
 
-            GeneratedSentence s1 = new GeneratedSentence("Hello there", "안녕 거기", "ELEMENTARY");
-            GeneratedSentence s2 = new GeneratedSentence("Hello world", "안녕 세상", "ELEMENTARY");
+            GeneratedSentence s1 = new GeneratedSentence(testUser, "Hello there", "안녕 거기", "ELEMENTARY");
+            GeneratedSentence s2 = new GeneratedSentence(testUser, "Hello world", "안녕 세상", "ELEMENTARY");
             given(generatedSentenceRepository.findByWordId(1L)).willReturn(List.of(s1, s2));
 
             // when
-            List<ReviewCardResponse> result = reviewService.getTodayCards("WORD", Collections.emptyList());
+            List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "WORD", Collections.emptyList());
 
             // then
             assertThat(result.get(0).getBack().getExamples()).hasSize(2);
@@ -241,7 +256,7 @@ class ReviewServiceTest {
             given(reviewLogRepository.save(any(ReviewLog.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
-            ReviewResultResponse result = reviewService.submitResult(1L, "EASY");
+            ReviewResultResponse result = reviewService.submitResult(testUser, 1L, "EASY");
 
             // then
             // new_interval = round(1 * 2.5 * 1.3) = round(3.25) = 3
@@ -261,7 +276,7 @@ class ReviewServiceTest {
             given(reviewLogRepository.save(any(ReviewLog.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
-            ReviewResultResponse result = reviewService.submitResult(1L, "MEDIUM");
+            ReviewResultResponse result = reviewService.submitResult(testUser, 1L, "MEDIUM");
 
             // then
             // new_interval = round(1 * 2.5) = 3 (반올림)
@@ -281,7 +296,7 @@ class ReviewServiceTest {
             given(reviewLogRepository.save(any(ReviewLog.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
-            ReviewResultResponse result = reviewService.submitResult(1L, "HARD");
+            ReviewResultResponse result = reviewService.submitResult(testUser, 1L, "HARD");
 
             // then
             assertThat(result.getIntervalDays()).isEqualTo(1);
@@ -300,7 +315,7 @@ class ReviewServiceTest {
             given(reviewLogRepository.save(any(ReviewLog.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
-            reviewService.submitResult(1L, "EASY");
+            reviewService.submitResult(testUser, 1L, "EASY");
 
             // then
             verify(reviewLogRepository).save(any(ReviewLog.class));
@@ -314,7 +329,7 @@ class ReviewServiceTest {
             given(reviewItemRepository.findById(999L)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> reviewService.submitResult(999L, "EASY"))
+            assertThatThrownBy(() -> reviewService.submitResult(testUser, 999L, "EASY"))
                     .isInstanceOf(NotFoundException.class);
         }
     }
@@ -322,7 +337,7 @@ class ReviewServiceTest {
     // === 헬퍼 메서드 ===
 
     private ReviewItem createReviewItem(Long id, String itemType, Long itemId, String direction) {
-        ReviewItem item = new ReviewItem(itemType, itemId, direction);
+        ReviewItem item = new ReviewItem(testUser, itemType, itemId, direction);
         setId(item, id);
         return item;
     }

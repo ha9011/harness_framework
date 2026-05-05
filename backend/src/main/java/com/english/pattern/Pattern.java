@@ -1,5 +1,6 @@
 package com.english.pattern;
 
+import com.english.auth.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -19,7 +20,11 @@ public class Pattern {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(nullable = false)
     private String template;
 
     private String description;
@@ -34,7 +39,8 @@ public class Pattern {
     @OrderBy("orderIndex ASC")
     private List<PatternExample> examples = new ArrayList<>();
 
-    public Pattern(String template, String description) {
+    public Pattern(User user, String template, String description) {
+        this.user = user;
         this.template = template;
         this.description = description;
         this.createdAt = LocalDateTime.now();

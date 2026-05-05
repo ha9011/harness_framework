@@ -1,5 +1,6 @@
 package com.english.word;
 
+import com.english.auth.User;
 import com.english.config.DuplicateException;
 import com.english.config.EmptyRequestException;
 import com.english.config.GeminiClient;
@@ -32,12 +33,12 @@ public class WordService {
     private final ReviewItemRepository reviewItemRepository;
 
     @Transactional
-    public WordResponse create(WordCreateRequest request) {
-        if (wordRepository.existsByWordAndDeletedFalse(request.getWord())) {
+    public WordResponse create(User user, WordCreateRequest request) {
+        if (wordRepository.existsByWordAndUserAndDeletedFalse(request.getWord(), user)) {
             throw new DuplicateException("이미 등록된 단어입니다: " + request.getWord());
         }
 
-        Word word = new Word(request.getWord(), request.getMeaning());
+        Word word = new Word(user, request.getWord(), request.getMeaning());
 
         // AI 보강 시도
         try {
@@ -52,17 +53,17 @@ public class WordService {
         Word saved = wordRepository.save(word);
 
         // 학습 기록 연동
-        StudyRecord record = studyRecordService.getOrCreateTodayRecord();
+        StudyRecord record = studyRecordService.getOrCreateTodayRecord(user);
         studyRecordService.addItem(record, "WORD", saved.getId());
 
         // 복습 아이템 생성
-        reviewItemService.createWordReviewItems(saved.getId());
+        reviewItemService.createWordReviewItems(user, saved.getId());
 
         return WordResponse.from(saved);
     }
 
     @Transactional
-    public BulkCreateResponse bulkCreate(List<WordCreateRequest> requests) {
+    public BulkCreateResponse bulkCreate(User user, List<WordCreateRequest> requests) {
         if (requests.isEmpty()) {
             throw new EmptyRequestException("등록할 단어가 없습니다");
         }
@@ -72,15 +73,15 @@ public class WordService {
         int enrichmentFailed = 0;
         List<WordResponse> words = new ArrayList<>();
 
-        StudyRecord record = studyRecordService.getOrCreateTodayRecord();
+        StudyRecord record = studyRecordService.getOrCreateTodayRecord(user);
 
         for (WordCreateRequest request : requests) {
-            if (wordRepository.existsByWordAndDeletedFalse(request.getWord())) {
+            if (wordRepository.existsByWordAndUserAndDeletedFalse(request.getWord(), user)) {
                 skipped++;
                 continue;
             }
 
-            Word word = new Word(request.getWord(), request.getMeaning());
+            Word word = new Word(user, request.getWord(), request.getMeaning());
 
             // AI 보강 시도
             boolean enriched = false;
@@ -98,7 +99,7 @@ public class WordService {
             Word savedWord = wordRepository.save(word);
 
             studyRecordService.addItem(record, "WORD", savedWord.getId());
-            reviewItemService.createWordReviewItems(savedWord.getId());
+            reviewItemService.createWordReviewItems(user, savedWord.getId());
 
             words.add(WordResponse.from(savedWord));
             saved++;
@@ -108,7 +109,7 @@ public class WordService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WordListResponse> getList(String search, String partOfSpeech, boolean importantOnly,
+    public Page<WordListResponse> getList(User user, String search, String partOfSpeech, boolean importantOnly,
                                            String sort, Pageable pageable) {
         Sort sorting = "name".equals(sort)
                 ? Sort.by(Sort.Direction.ASC, "word")
@@ -116,24 +117,23 @@ public class WordService {
 
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sorting);
 
-        return wordRepository.findAllWithFilters(search, partOfSpeech, importantOnly, sortedPageable)
+        return wordRepository.findAllWithFilters(user, search, partOfSpeech, importantOnly, sortedPageable)
                 .map(WordListResponse::from);
     }
 
     @Transactional(readOnly = true)
-    public WordDetailResponse getDetail(Long id) {
-        Word word = wordRepository.findByIdAndDeletedFalse(id)
+    public WordDetailResponse getDetail(User user, Long id) {
+        Word word = wordRepository.findByIdAndUserAndDeletedFalse(id, user)
                 .orElseThrow(() -> new NotFoundException("단어를 찾을 수 없습니다: " + id));
 
-        // 예문은 Step 3에서 generated_sentence_words 테이블 구현 후 연동
         List<String> examples = List.of();
 
         return WordDetailResponse.from(word, examples);
     }
 
     @Transactional
-    public WordResponse toggleImportant(Long id) {
-        Word word = wordRepository.findByIdAndDeletedFalse(id)
+    public WordResponse toggleImportant(User user, Long id) {
+        Word word = wordRepository.findByIdAndUserAndDeletedFalse(id, user)
                 .orElseThrow(() -> new NotFoundException("단어를 찾을 수 없습니다: " + id));
 
         word.toggleImportant();
@@ -141,12 +141,12 @@ public class WordService {
     }
 
     @Transactional
-    public void delete(Long id) {
-        Word word = wordRepository.findByIdAndDeletedFalse(id)
+    public void delete(User user, Long id) {
+        Word word = wordRepository.findByIdAndUserAndDeletedFalse(id, user)
                 .orElseThrow(() -> new NotFoundException("단어를 찾을 수 없습니다: " + id));
 
         word.softDelete();
-        reviewItemRepository.softDeleteByItemTypeAndItemId("WORD", id);
+        reviewItemRepository.softDeleteByUserAndItemTypeAndItemId(user, "WORD", id);
     }
 
     private String buildEnrichmentPrompt(String word, String meaning) {

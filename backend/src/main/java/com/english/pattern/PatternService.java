@@ -1,5 +1,6 @@
 package com.english.pattern;
 
+import com.english.auth.User;
 import com.english.config.DuplicateException;
 import com.english.config.GeminiClient;
 import com.english.config.InvalidImageException;
@@ -35,12 +36,12 @@ public class PatternService {
     );
 
     @Transactional
-    public PatternResponse create(PatternCreateRequest request) {
-        if (patternRepository.existsByTemplateAndDeletedFalse(request.getTemplate())) {
+    public PatternResponse create(User user, PatternCreateRequest request) {
+        if (patternRepository.existsByTemplateAndUserAndDeletedFalse(request.getTemplate(), user)) {
             throw new DuplicateException("이미 등록된 패턴입니다: " + request.getTemplate());
         }
 
-        Pattern pattern = new Pattern(request.getTemplate(), request.getDescription());
+        Pattern pattern = new Pattern(user, request.getTemplate(), request.getDescription());
 
         if (request.getExamples() != null) {
             for (int i = 0; i < request.getExamples().size(); i++) {
@@ -52,36 +53,36 @@ public class PatternService {
         Pattern saved = patternRepository.save(pattern);
 
         // 학습 기록 연동
-        StudyRecord record = studyRecordService.getOrCreateTodayRecord();
+        StudyRecord record = studyRecordService.getOrCreateTodayRecord(user);
         studyRecordService.addItem(record, "PATTERN", saved.getId());
 
         // 복습 아이템 생성
-        reviewItemService.createPatternReviewItems(saved.getId());
+        reviewItemService.createPatternReviewItems(user, saved.getId());
 
         return PatternResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public Page<PatternListResponse> getList(Pageable pageable) {
-        return patternRepository.findByDeletedFalse(pageable)
+    public Page<PatternListResponse> getList(User user, Pageable pageable) {
+        return patternRepository.findByUserAndDeletedFalse(user, pageable)
                 .map(PatternListResponse::from);
     }
 
     @Transactional(readOnly = true)
-    public PatternDetailResponse getDetail(Long id) {
-        Pattern pattern = patternRepository.findByIdAndDeletedFalse(id)
+    public PatternDetailResponse getDetail(User user, Long id) {
+        Pattern pattern = patternRepository.findByIdAndUserAndDeletedFalse(id, user)
                 .orElseThrow(() -> new NotFoundException("패턴을 찾을 수 없습니다: " + id));
 
         return PatternDetailResponse.from(pattern);
     }
 
     @Transactional
-    public void delete(Long id) {
-        Pattern pattern = patternRepository.findByIdAndDeletedFalse(id)
+    public void delete(User user, Long id) {
+        Pattern pattern = patternRepository.findByIdAndUserAndDeletedFalse(id, user)
                 .orElseThrow(() -> new NotFoundException("패턴을 찾을 수 없습니다: " + id));
 
         pattern.softDelete();
-        reviewItemRepository.softDeleteByItemTypeAndItemId("PATTERN", id);
+        reviewItemRepository.softDeleteByUserAndItemTypeAndItemId(user, "PATTERN", id);
     }
 
     public PatternExtractResponse extractFromImage(MultipartFile image) {

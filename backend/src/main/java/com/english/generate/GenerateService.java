@@ -1,5 +1,6 @@
 package com.english.generate;
 
+import com.english.auth.User;
 import com.english.config.GeminiClient;
 import com.english.config.NoPatternsException;
 import com.english.config.NoWordsException;
@@ -35,58 +36,58 @@ public class GenerateService {
     private static final int MAX_WORDS = 50;
 
     @Transactional
-    public GenerateResponse generate(GenerateRequest request) {
-        List<Word> words = selectWords();
-        List<Pattern> patterns = selectPatterns();
+    public GenerateResponse generate(User user, GenerateRequest request) {
+        List<Word> words = selectWords(user);
+        List<Pattern> patterns = selectPatterns(user);
 
         String prompt = buildPrompt(words, patterns, request.getLevel(), request.getCount(), null, null);
-        List<GenerateResponse.SentenceResponse> sentences = callGeminiAndSave(prompt, request.getLevel());
+        List<GenerateResponse.SentenceResponse> sentences = callGeminiAndSave(user, prompt, request.getLevel());
 
-        saveHistory(request.getLevel(), request.getCount(), sentences.size(), null, null);
+        saveHistory(user, request.getLevel(), request.getCount(), sentences.size(), null, null);
 
         return new GenerateResponse(null, sentences);
     }
 
     @Transactional
-    public GenerateResponse generateByWord(Long wordId, GenerateRequest request) {
-        Word targetWord = wordRepository.findByIdAndDeletedFalse(wordId)
+    public GenerateResponse generateByWord(User user, Long wordId, GenerateRequest request) {
+        Word targetWord = wordRepository.findByIdAndUserAndDeletedFalse(wordId, user)
                 .orElseThrow(() -> new NotFoundException("단어를 찾을 수 없습니다: " + wordId));
 
-        List<Word> words = selectWords();
-        List<Pattern> patterns = selectPatterns();
+        List<Word> words = selectWords(user);
+        List<Pattern> patterns = selectPatterns(user);
 
         String prompt = buildPrompt(words, patterns, request.getLevel(), request.getCount(), targetWord, null);
-        List<GenerateResponse.SentenceResponse> sentences = callGeminiAndSave(prompt, request.getLevel());
+        List<GenerateResponse.SentenceResponse> sentences = callGeminiAndSave(user, prompt, request.getLevel());
 
-        saveHistory(request.getLevel(), request.getCount(), sentences.size(), wordId, null);
+        saveHistory(user, request.getLevel(), request.getCount(), sentences.size(), wordId, null);
 
         return new GenerateResponse(null, sentences);
     }
 
     @Transactional
-    public GenerateResponse generateByPattern(Long patternId, GenerateRequest request) {
-        Pattern targetPattern = patternRepository.findByIdAndDeletedFalse(patternId)
+    public GenerateResponse generateByPattern(User user, Long patternId, GenerateRequest request) {
+        Pattern targetPattern = patternRepository.findByIdAndUserAndDeletedFalse(patternId, user)
                 .orElseThrow(() -> new NotFoundException("패턴을 찾을 수 없습니다: " + patternId));
 
-        List<Word> words = selectWords();
+        List<Word> words = selectWords(user);
 
         String prompt = buildPrompt(words, List.of(targetPattern), request.getLevel(), request.getCount(), null, targetPattern);
-        List<GenerateResponse.SentenceResponse> sentences = callGeminiAndSave(prompt, request.getLevel());
+        List<GenerateResponse.SentenceResponse> sentences = callGeminiAndSave(user, prompt, request.getLevel());
 
-        saveHistory(request.getLevel(), request.getCount(), sentences.size(), null, patternId);
+        saveHistory(user, request.getLevel(), request.getCount(), sentences.size(), null, patternId);
 
         return new GenerateResponse(null, sentences);
     }
 
     @Transactional(readOnly = true)
-    public Page<GenerationHistoryResponse> getHistory(Pageable pageable) {
-        return generationHistoryRepository.findAllByOrderByCreatedAtDesc(pageable)
+    public Page<GenerationHistoryResponse> getHistory(User user, Pageable pageable) {
+        return generationHistoryRepository.findByUserOrderByCreatedAtDesc(user, pageable)
                 .map(GenerationHistoryResponse::from);
     }
 
     // 단어 선택: ⭐중요 > 복습 적은 것 > 랜덤, 최대 50개
-    private List<Word> selectWords() {
-        List<Word> allWords = wordRepository.findByDeletedFalse();
+    private List<Word> selectWords(User user) {
+        List<Word> allWords = wordRepository.findByUserAndDeletedFalse(user);
         if (allWords.isEmpty()) {
             throw new NoWordsException("등록된 단어가 없습니다");
         }
@@ -108,22 +109,22 @@ public class GenerateService {
         return sorted;
     }
 
-    private List<Pattern> selectPatterns() {
-        Page<Pattern> patternPage = patternRepository.findByDeletedFalse(PageRequest.of(0, 100));
+    private List<Pattern> selectPatterns(User user) {
+        Page<Pattern> patternPage = patternRepository.findByUserAndDeletedFalse(user, PageRequest.of(0, 100));
         if (patternPage.isEmpty()) {
             throw new NoPatternsException("등록된 패턴이 없습니다");
         }
         return patternPage.getContent();
     }
 
-    private List<GenerateResponse.SentenceResponse> callGeminiAndSave(String prompt, String level) {
+    private List<GenerateResponse.SentenceResponse> callGeminiAndSave(User user, String prompt, String level) {
         GeminiGenerateResponse geminiResponse = geminiClient.generateContent(prompt, GeminiGenerateResponse.class);
 
         List<GenerateResponse.SentenceResponse> result = new ArrayList<>();
 
         for (GeminiGenerateResponse.GeminiSentence gs : geminiResponse.getSentences()) {
             GeneratedSentence sentence = new GeneratedSentence(
-                    gs.getEnglishSentence(), gs.getKoreanTranslation(), level);
+                    user, gs.getEnglishSentence(), gs.getKoreanTranslation(), level);
 
             // situation 추가
             if (gs.getSituations() != null) {
@@ -132,10 +133,10 @@ public class GenerateService {
                 }
             }
 
-            // word 매핑 (존재하는 ID만)
+            // word 매핑 (존재하는 ID + 현재 사용자의 것만)
             if (gs.getWordIds() != null) {
                 for (Long wordId : gs.getWordIds()) {
-                    if (wordRepository.existsById(wordId)) {
+                    if (wordRepository.existsByIdAndUser(wordId, user)) {
                         sentence.addSentenceWord(wordId);
                     } else {
                         log.warn("Gemini가 반환한 wordId {}는 존재하지 않아 매핑 무시", wordId);
@@ -146,7 +147,7 @@ public class GenerateService {
             GeneratedSentence saved = generatedSentenceRepository.save(sentence);
 
             // SENTENCE RECOGNITION review_item 생성
-            reviewItemService.createSentenceReviewItem(saved.getId());
+            reviewItemService.createSentenceReviewItem(user, saved.getId());
 
             result.add(GenerateResponse.SentenceResponse.from(saved));
         }
@@ -154,10 +155,9 @@ public class GenerateService {
         return result;
     }
 
-    private void saveHistory(String level, int requestedCount, int actualCount, Long wordId, Long patternId) {
-        GenerationHistory history = new GenerationHistory(level, requestedCount, actualCount, wordId, patternId);
-        GenerationHistory saved = generationHistoryRepository.save(history);
-        // GenerateResponse에 generationId 설정은 Controller에서 처리
+    private void saveHistory(User user, String level, int requestedCount, int actualCount, Long wordId, Long patternId) {
+        GenerationHistory history = new GenerationHistory(user, level, requestedCount, actualCount, wordId, patternId);
+        generationHistoryRepository.save(history);
     }
 
     private String buildPrompt(List<Word> words, List<Pattern> patterns, String level, int count,

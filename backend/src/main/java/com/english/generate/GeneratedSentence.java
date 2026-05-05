@@ -1,5 +1,6 @@
 package com.english.generate;
 
+import com.english.auth.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -19,6 +20,10 @@ public class GeneratedSentence {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @Column(name = "english_sentence", nullable = false, columnDefinition = "TEXT")
     private String englishSentence;
 
@@ -37,7 +42,8 @@ public class GeneratedSentence {
     @OneToMany(mappedBy = "sentence", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GeneratedSentenceWord> sentenceWords = new ArrayList<>();
 
-    public GeneratedSentence(String englishSentence, String koreanTranslation, String level) {
+    public GeneratedSentence(User user, String englishSentence, String koreanTranslation, String level) {
+        this.user = user;
         this.englishSentence = englishSentence;
         this.koreanTranslation = koreanTranslation;
         this.level = level;

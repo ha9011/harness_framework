@@ -17,8 +17,9 @@ public class ReviewLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "review_item_id", nullable = false)
-    private Long reviewItemId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "review_item_id", nullable = false)
+    private ReviewItem reviewItem;
 
     @Column(nullable = false)
     private String result;
@@ -38,10 +39,10 @@ public class ReviewLog {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public ReviewLog(Long reviewItemId, String result,
+    public ReviewLog(ReviewItem reviewItem, String result,
                      int previousInterval, int newInterval,
                      double previousEaseFactor, double newEaseFactor) {
-        this.reviewItemId = reviewItemId;
+        this.reviewItem = reviewItem;
         this.result = result;
         this.previousInterval = previousInterval;
         this.newInterval = newInterval;

@@ -1,10 +1,11 @@
 package com.english.review;
 
+import com.english.auth.User;
+import com.english.config.ForbiddenException;
 import com.english.config.NotFoundException;
 import com.english.generate.GeneratedSentence;
 import com.english.generate.GeneratedSentenceRepository;
 import com.english.pattern.Pattern;
-import com.english.pattern.PatternExample;
 import com.english.pattern.PatternRepository;
 import com.english.setting.SettingService;
 import com.english.word.Word;
@@ -34,11 +35,11 @@ public class ReviewService {
      * 오늘 복습할 카드 선정
      */
     @Transactional(readOnly = true)
-    public List<ReviewCardResponse> getTodayCards(String type, List<Long> exclude) {
+    public List<ReviewCardResponse> getTodayCards(User user, String type, List<Long> exclude) {
         List<Long> excludeIds = (exclude == null || exclude.isEmpty())
                 ? Collections.singletonList(-1L) : exclude;
 
-        List<ReviewItem> items = reviewItemRepository.findTodayCards(type, LocalDate.now(), excludeIds);
+        List<ReviewItem> items = reviewItemRepository.findTodayCards(user, type, LocalDate.now(), excludeIds);
 
         // 카드 응답 빌드 (원본 삭제된 항목은 null → 제외)
         List<ReviewCardResponse> cards = items.stream()
@@ -47,7 +48,7 @@ public class ReviewService {
                 .collect(Collectors.toList());
 
         // LIMIT N (설정에서 dailyReviewCount 조회)
-        int dailyReviewCount = settingService.getSetting().getDailyReviewCount();
+        int dailyReviewCount = settingService.getSetting(user).getDailyReviewCount();
         int limit = Math.min(cards.size(), dailyReviewCount);
         List<ReviewCardResponse> selected = new ArrayList<>(cards.subList(0, limit));
 
@@ -61,9 +62,14 @@ public class ReviewService {
      * SM-2 결과 제출
      */
     @Transactional
-    public ReviewResultResponse submitResult(Long reviewItemId, String result) {
+    public ReviewResultResponse submitResult(User user, Long reviewItemId, String result) {
         ReviewItem item = reviewItemRepository.findById(reviewItemId)
                 .orElseThrow(() -> new NotFoundException("복습 아이템을 찾을 수 없습니다."));
+
+        // IDOR 방어: 소유권 검증
+        if (!item.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("접근 권한이 없습니다.");
+        }
 
         ReviewLog log = item.applyResult(result);
         reviewLogRepository.save(log);
@@ -92,21 +98,19 @@ public class ReviewService {
     }
 
     private ReviewCardResponse buildWordCard(ReviewItem item) {
-        Word word = wordRepository.findByIdAndDeletedFalse(item.getItemId()).orElse(null);
+        Word word = wordRepository.findByIdAndUserAndDeletedFalse(item.getItemId(), item.getUser()).orElse(null);
         if (word == null) return null;
 
         ReviewCardResponse.FrontContent front;
         ReviewCardResponse.BackContent back;
 
         if ("RECOGNITION".equals(item.getDirection())) {
-            // 앞면: 영어 단어, 뒷면: 뜻 + 품사 + 예문(최대 3개)
             front = new ReviewCardResponse.FrontContent(word.getWord(), null, null, null, null, null);
 
             List<ReviewCardResponse.ExampleDto> examples = getWordExamples(item.getItemId());
             back = new ReviewCardResponse.BackContent(null, word.getMeaning(), word.getPartOfSpeech(),
                     null, null, null, examples);
         } else {
-            // RECALL: 앞면: 뜻, 뒷면: 영어 단어 + 품사
             front = new ReviewCardResponse.FrontContent(null, word.getMeaning(), null, null, null, null);
             back = new ReviewCardResponse.BackContent(word.getWord(), null, word.getPartOfSpeech(),
                     null, null, null, null);
@@ -116,14 +120,13 @@ public class ReviewService {
     }
 
     private ReviewCardResponse buildPatternCard(ReviewItem item) {
-        Pattern pattern = patternRepository.findByIdAndDeletedFalse(item.getItemId()).orElse(null);
+        Pattern pattern = patternRepository.findByIdAndUserAndDeletedFalse(item.getItemId(), item.getUser()).orElse(null);
         if (pattern == null) return null;
 
         ReviewCardResponse.FrontContent front;
         ReviewCardResponse.BackContent back;
 
         if ("RECOGNITION".equals(item.getDirection())) {
-            // 앞면: 패턴 템플릿, 뒷면: 설명 + 교재 예문
             front = new ReviewCardResponse.FrontContent(null, null, pattern.getTemplate(), null, null, null);
 
             List<ReviewCardResponse.ExampleDto> examples = pattern.getExamples().stream()
@@ -132,7 +135,6 @@ public class ReviewService {
             back = new ReviewCardResponse.BackContent(null, null, null,
                     null, pattern.getDescription(), null, examples);
         } else {
-            // RECALL: 앞면: 설명, 뒷면: 패턴 템플릿
             front = new ReviewCardResponse.FrontContent(null, null, null, pattern.getDescription(), null, null);
             back = new ReviewCardResponse.BackContent(null, null, null,
                     pattern.getTemplate(), null, null, null);

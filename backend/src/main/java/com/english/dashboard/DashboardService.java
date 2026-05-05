@@ -1,5 +1,6 @@
 package com.english.dashboard;
 
+import com.english.auth.User;
 import com.english.generate.GeneratedSentenceRepository;
 import com.english.pattern.PatternRepository;
 import com.english.review.ReviewItemRepository;
@@ -29,21 +30,21 @@ public class DashboardService {
     private final StudyRecordItemRepository studyRecordItemRepository;
 
     @Transactional(readOnly = true)
-    public DashboardResponse getDashboard() {
-        long wordCount = wordRepository.countByDeletedFalse();
-        long patternCount = patternRepository.countByDeletedFalse();
-        long sentenceCount = generatedSentenceRepository.count();
+    public DashboardResponse getDashboard(User user) {
+        long wordCount = wordRepository.countByUserAndDeletedFalse(user);
+        long patternCount = patternRepository.countByUserAndDeletedFalse(user);
+        long sentenceCount = generatedSentenceRepository.countByUser(user);
 
-        int streak = calculateStreak();
+        int streak = calculateStreak(user);
 
         LocalDate today = LocalDate.now();
-        long wordRemaining = reviewItemRepository.countTodayRemaining("WORD", today);
-        long patternRemaining = reviewItemRepository.countTodayRemaining("PATTERN", today);
-        long sentenceRemaining = reviewItemRepository.countTodayRemaining("SENTENCE", today);
+        long wordRemaining = reviewItemRepository.countTodayRemaining(user, "WORD", today);
+        long patternRemaining = reviewItemRepository.countTodayRemaining(user, "PATTERN", today);
+        long sentenceRemaining = reviewItemRepository.countTodayRemaining(user, "SENTENCE", today);
         DashboardResponse.ReviewRemaining remaining =
                 new DashboardResponse.ReviewRemaining(wordRemaining, patternRemaining, sentenceRemaining);
 
-        List<StudyRecord> recentRecords = studyRecordRepository.findTop5ByOrderByCreatedAtDesc();
+        List<StudyRecord> recentRecords = studyRecordRepository.findTop5ByUserOrderByCreatedAtDesc(user);
         List<DashboardResponse.StudyRecordDto> recentDtos = recentRecords.stream()
                 .map(r -> new DashboardResponse.StudyRecordDto(
                         r.getId(),
@@ -57,8 +58,8 @@ public class DashboardService {
         return new DashboardResponse(wordCount, patternCount, sentenceCount, streak, remaining, recentDtos);
     }
 
-    private int calculateStreak() {
-        List<LocalDate> reviewDates = reviewLogRepository.findDistinctReviewDates();
+    private int calculateStreak(User user) {
+        List<LocalDate> reviewDates = reviewLogRepository.findDistinctReviewDates(user);
         if (reviewDates.isEmpty()) return 0;
 
         LocalDate today = LocalDate.now();

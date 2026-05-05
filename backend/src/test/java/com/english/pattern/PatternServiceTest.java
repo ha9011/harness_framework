@@ -1,10 +1,12 @@
 package com.english.pattern;
 
+import com.english.auth.User;
 import com.english.config.*;
 import com.english.review.ReviewItemRepository;
 import com.english.review.ReviewItemService;
 import com.english.study.StudyRecord;
 import com.english.study.StudyRecordService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -49,6 +51,20 @@ class PatternServiceTest {
     @InjectMocks
     private PatternService patternService;
 
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User("test@test.com", "password", "테스터");
+        try {
+            var idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(testUser, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Nested
     @DisplayName("패턴 등록")
     class CreatePattern {
@@ -66,27 +82,27 @@ class PatternServiceTest {
                     )
             );
 
-            given(patternRepository.existsByTemplateAndDeletedFalse("I want to ~")).willReturn(false);
+            given(patternRepository.existsByTemplateAndUserAndDeletedFalse("I want to ~", testUser)).willReturn(false);
 
-            Pattern savedPattern = new Pattern("I want to ~", "~하고 싶다");
+            Pattern savedPattern = new Pattern(testUser, "I want to ~", "~하고 싶다");
             savedPattern.addExample("I want to go home.", "집에 가고 싶다.", 0);
             savedPattern.addExample("I want to eat pizza.", "피자를 먹고 싶다.", 1);
             given(patternRepository.save(any(Pattern.class))).willReturn(savedPattern);
 
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            PatternResponse response = patternService.create(request);
+            PatternResponse response = patternService.create(testUser, request);
 
             // then
             assertThat(response.getTemplate()).isEqualTo("I want to ~");
             assertThat(response.getDescription()).isEqualTo("~하고 싶다");
 
             verify(patternRepository).save(any(Pattern.class));
-            verify(studyRecordService).getOrCreateTodayRecord();
+            verify(studyRecordService).getOrCreateTodayRecord(testUser);
             verify(studyRecordService).addItem(eq(record), eq("PATTERN"), any());
-            verify(reviewItemService).createPatternReviewItems(any());
+            verify(reviewItemService).createPatternReviewItems(eq(testUser), any());
         }
 
         @Test
@@ -94,10 +110,10 @@ class PatternServiceTest {
         void createDuplicate() {
             // given
             PatternCreateRequest request = new PatternCreateRequest("I want to ~", "~하고 싶다", List.of());
-            given(patternRepository.existsByTemplateAndDeletedFalse("I want to ~")).willReturn(true);
+            given(patternRepository.existsByTemplateAndUserAndDeletedFalse("I want to ~", testUser)).willReturn(true);
 
             // when & then
-            assertThatThrownBy(() -> patternService.create(request))
+            assertThatThrownBy(() -> patternService.create(testUser, request))
                     .isInstanceOf(DuplicateException.class);
 
             verify(patternRepository, never()).save(any());
@@ -108,19 +124,19 @@ class PatternServiceTest {
         void studyRecordCreated() {
             // given
             PatternCreateRequest request = new PatternCreateRequest("I want to ~", "~하고 싶다", List.of());
-            given(patternRepository.existsByTemplateAndDeletedFalse("I want to ~")).willReturn(false);
+            given(patternRepository.existsByTemplateAndUserAndDeletedFalse("I want to ~", testUser)).willReturn(false);
 
-            Pattern savedPattern = new Pattern("I want to ~", "~하고 싶다");
+            Pattern savedPattern = new Pattern(testUser, "I want to ~", "~하고 싶다");
             given(patternRepository.save(any(Pattern.class))).willReturn(savedPattern);
 
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            patternService.create(request);
+            patternService.create(testUser, request);
 
             // then
-            verify(studyRecordService).getOrCreateTodayRecord();
+            verify(studyRecordService).getOrCreateTodayRecord(testUser);
             verify(studyRecordService).addItem(eq(record), eq("PATTERN"), any());
         }
 
@@ -129,19 +145,19 @@ class PatternServiceTest {
         void reviewItemsCreated() {
             // given
             PatternCreateRequest request = new PatternCreateRequest("I want to ~", "~하고 싶다", List.of());
-            given(patternRepository.existsByTemplateAndDeletedFalse("I want to ~")).willReturn(false);
+            given(patternRepository.existsByTemplateAndUserAndDeletedFalse("I want to ~", testUser)).willReturn(false);
 
-            Pattern savedPattern = new Pattern("I want to ~", "~하고 싶다");
+            Pattern savedPattern = new Pattern(testUser, "I want to ~", "~하고 싶다");
             given(patternRepository.save(any(Pattern.class))).willReturn(savedPattern);
 
-            StudyRecord record = new StudyRecord(1, LocalDate.now());
-            given(studyRecordService.getOrCreateTodayRecord()).willReturn(record);
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
 
             // when
-            patternService.create(request);
+            patternService.create(testUser, request);
 
             // then
-            verify(reviewItemService).createPatternReviewItems(any());
+            verify(reviewItemService).createPatternReviewItems(eq(testUser), any());
         }
     }
 
@@ -153,12 +169,12 @@ class PatternServiceTest {
         @DisplayName("페이지네이션 조회")
         void getListPaginated() {
             // given
-            Pattern pattern = new Pattern("I want to ~", "~하고 싶다");
+            Pattern pattern = new Pattern(testUser, "I want to ~", "~하고 싶다");
             Page<Pattern> page = new PageImpl<>(List.of(pattern), PageRequest.of(0, 20), 1);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(page);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(page);
 
             // when
-            Page<PatternListResponse> result = patternService.getList(PageRequest.of(0, 20));
+            Page<PatternListResponse> result = patternService.getList(testUser, PageRequest.of(0, 20));
 
             // then
             assertThat(result.getContent()).hasSize(1);
@@ -174,12 +190,12 @@ class PatternServiceTest {
         @DisplayName("성공")
         void getDetailSuccess() {
             // given
-            Pattern pattern = new Pattern("I want to ~", "~하고 싶다");
+            Pattern pattern = new Pattern(testUser, "I want to ~", "~하고 싶다");
             pattern.addExample("I want to go.", "가고 싶다.", 0);
-            given(patternRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(pattern));
+            given(patternRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(pattern));
 
             // when
-            PatternDetailResponse response = patternService.getDetail(1L);
+            PatternDetailResponse response = patternService.getDetail(testUser, 1L);
 
             // then
             assertThat(response.getTemplate()).isEqualTo("I want to ~");
@@ -191,10 +207,10 @@ class PatternServiceTest {
         @DisplayName("존재하지 않는 ID → NotFoundException")
         void getDetailNotFound() {
             // given
-            given(patternRepository.findByIdAndDeletedFalse(999L)).willReturn(Optional.empty());
+            given(patternRepository.findByIdAndUserAndDeletedFalse(999L, testUser)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> patternService.getDetail(999L))
+            assertThatThrownBy(() -> patternService.getDetail(testUser, 999L))
                     .isInstanceOf(NotFoundException.class);
         }
     }
@@ -207,25 +223,25 @@ class PatternServiceTest {
         @DisplayName("성공 → PATTERN review_items만 삭제")
         void deleteSuccess() {
             // given
-            Pattern pattern = new Pattern("I want to ~", "~하고 싶다");
-            given(patternRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(pattern));
+            Pattern pattern = new Pattern(testUser, "I want to ~", "~하고 싶다");
+            given(patternRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(pattern));
 
             // when
-            patternService.delete(1L);
+            patternService.delete(testUser, 1L);
 
             // then
             assertThat(pattern.isDeleted()).isTrue();
-            verify(reviewItemRepository).softDeleteByItemTypeAndItemId("PATTERN", 1L);
+            verify(reviewItemRepository).softDeleteByUserAndItemTypeAndItemId(testUser, "PATTERN", 1L);
         }
 
         @Test
         @DisplayName("존재하지 않는 ID → NotFoundException")
         void deleteNotFound() {
             // given
-            given(patternRepository.findByIdAndDeletedFalse(999L)).willReturn(Optional.empty());
+            given(patternRepository.findByIdAndUserAndDeletedFalse(999L, testUser)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> patternService.delete(999L))
+            assertThatThrownBy(() -> patternService.delete(testUser, 999L))
                     .isInstanceOf(NotFoundException.class);
         }
     }

@@ -1,5 +1,6 @@
 package com.english.generate;
 
+import com.english.auth.User;
 import com.english.config.GeminiClient;
 import com.english.config.GeminiException;
 import com.english.config.NoPatternsException;
@@ -69,12 +70,22 @@ class GenerateServiceTest {
     @InjectMocks
     private GenerateService generateService;
 
+    private User testUser;
     private List<Word> sampleWords;
     private List<Pattern> samplePatterns;
     private GeminiGenerateResponse sampleGeminiResponse;
 
     @BeforeEach
     void setUp() {
+        testUser = new User("test@test.com", "password", "테스터");
+        try {
+            var idField = User.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(testUser, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
         sampleWords = List.of(
                 createWord(1L, "apple", "사과", true),
                 createWord(2L, "banana", "바나나", false),
@@ -103,7 +114,7 @@ class GenerateServiceTest {
     }
 
     private Word createWord(Long id, String word, String meaning, boolean important) {
-        Word w = new Word(word, meaning);
+        Word w = new Word(testUser, word, meaning);
         // Reflection으로 id 설정
         try {
             var idField = Word.class.getDeclaredField("id");
@@ -119,7 +130,7 @@ class GenerateServiceTest {
     }
 
     private Pattern createPattern(Long id, String template, String description) {
-        Pattern p = new Pattern(template, description);
+        Pattern p = new Pattern(testUser, template, description);
         try {
             var idField = Pattern.class.getDeclaredField("id");
             idField.setAccessible(true);
@@ -140,8 +151,8 @@ class GenerateServiceTest {
             // given
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, null, null);
 
-            given(wordRepository.findByDeletedFalse()).willReturn(sampleWords);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(new PageImpl<>(samplePatterns));
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(sampleWords);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(new PageImpl<>(samplePatterns));
             given(geminiClient.generateContent(anyString(), eq(GeminiGenerateResponse.class)))
                     .willReturn(sampleGeminiResponse);
             given(generatedSentenceRepository.save(any(GeneratedSentence.class)))
@@ -159,11 +170,11 @@ class GenerateServiceTest {
             given(generationHistoryRepository.save(any(GenerationHistory.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
             // word 존재 확인
-            given(wordRepository.existsById(1L)).willReturn(true);
-            given(wordRepository.existsById(2L)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(1L, testUser)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(2L, testUser)).willReturn(true);
 
             // when
-            GenerateResponse response = generateService.generate(request);
+            GenerateResponse response = generateService.generate(testUser, request);
 
             // then
             assertThat(response.getSentences()).hasSize(2);
@@ -171,7 +182,7 @@ class GenerateServiceTest {
             assertThat(response.getSentences().get(0).getSituations()).hasSize(5);
 
             verify(generatedSentenceRepository, times(2)).save(any(GeneratedSentence.class));
-            verify(reviewItemService, times(2)).createSentenceReviewItem(any());
+            verify(reviewItemService, times(2)).createSentenceReviewItem(eq(testUser), any());
             verify(generationHistoryRepository).save(any(GenerationHistory.class));
         }
 
@@ -180,10 +191,10 @@ class GenerateServiceTest {
         void generateNoWords() {
             // given
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, null, null);
-            given(wordRepository.findByDeletedFalse()).willReturn(List.of());
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(List.of());
 
             // when & then
-            assertThatThrownBy(() -> generateService.generate(request))
+            assertThatThrownBy(() -> generateService.generate(testUser, request))
                     .isInstanceOf(NoWordsException.class);
         }
 
@@ -192,11 +203,11 @@ class GenerateServiceTest {
         void generateNoPatterns() {
             // given
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, null, null);
-            given(wordRepository.findByDeletedFalse()).willReturn(sampleWords);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(Page.empty());
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(sampleWords);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(Page.empty());
 
             // when & then
-            assertThatThrownBy(() -> generateService.generate(request))
+            assertThatThrownBy(() -> generateService.generate(testUser, request))
                     .isInstanceOf(NoPatternsException.class);
         }
     }
@@ -211,9 +222,9 @@ class GenerateServiceTest {
             // given
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, 1L, null);
 
-            given(wordRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(sampleWords.get(0)));
-            given(wordRepository.findByDeletedFalse()).willReturn(sampleWords);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(new PageImpl<>(samplePatterns));
+            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(sampleWords.get(0)));
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(sampleWords);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(new PageImpl<>(samplePatterns));
             given(geminiClient.generateContent(anyString(), eq(GeminiGenerateResponse.class)))
                     .willReturn(sampleGeminiResponse);
             given(generatedSentenceRepository.save(any(GeneratedSentence.class)))
@@ -230,11 +241,11 @@ class GenerateServiceTest {
                     });
             given(generationHistoryRepository.save(any(GenerationHistory.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            given(wordRepository.existsById(1L)).willReturn(true);
-            given(wordRepository.existsById(2L)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(1L, testUser)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(2L, testUser)).willReturn(true);
 
             // when
-            GenerateResponse response = generateService.generateByWord(1L, request);
+            GenerateResponse response = generateService.generateByWord(testUser, 1L, request);
 
             // then
             assertThat(response.getSentences()).hasSize(2);
@@ -249,10 +260,10 @@ class GenerateServiceTest {
         void generateByWordNotFound() {
             // given
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, 1L, null);
-            given(wordRepository.findByIdAndDeletedFalse(999L)).willReturn(Optional.empty());
+            given(wordRepository.findByIdAndUserAndDeletedFalse(999L, testUser)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> generateService.generateByWord(999L, request))
+            assertThatThrownBy(() -> generateService.generateByWord(testUser, 999L, request))
                     .isInstanceOf(NotFoundException.class);
         }
     }
@@ -267,8 +278,8 @@ class GenerateServiceTest {
             // given
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, null, 1L);
 
-            given(patternRepository.findByIdAndDeletedFalse(1L)).willReturn(Optional.of(samplePatterns.get(0)));
-            given(wordRepository.findByDeletedFalse()).willReturn(sampleWords);
+            given(patternRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(samplePatterns.get(0)));
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(sampleWords);
             given(geminiClient.generateContent(anyString(), eq(GeminiGenerateResponse.class)))
                     .willReturn(sampleGeminiResponse);
             given(generatedSentenceRepository.save(any(GeneratedSentence.class)))
@@ -285,11 +296,11 @@ class GenerateServiceTest {
                     });
             given(generationHistoryRepository.save(any(GenerationHistory.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            given(wordRepository.existsById(1L)).willReturn(true);
-            given(wordRepository.existsById(2L)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(1L, testUser)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(2L, testUser)).willReturn(true);
 
             // when
-            GenerateResponse response = generateService.generateByPattern(1L, request);
+            GenerateResponse response = generateService.generateByPattern(testUser, 1L, request);
 
             // then
             assertThat(response.getSentences()).hasSize(2);
@@ -303,10 +314,10 @@ class GenerateServiceTest {
         void generateByPatternNotFound() {
             // given
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, null, 1L);
-            given(patternRepository.findByIdAndDeletedFalse(999L)).willReturn(Optional.empty());
+            given(patternRepository.findByIdAndUserAndDeletedFalse(999L, testUser)).willReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> generateService.generateByPattern(999L, request))
+            assertThatThrownBy(() -> generateService.generateByPattern(testUser, 999L, request))
                     .isInstanceOf(NotFoundException.class);
         }
     }
@@ -326,8 +337,8 @@ class GenerateServiceTest {
             }
 
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, null, null);
-            given(wordRepository.findByDeletedFalse()).willReturn(manyWords);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(new PageImpl<>(samplePatterns));
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(manyWords);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(new PageImpl<>(samplePatterns));
 
             GeminiGenerateResponse simpleResponse = new GeminiGenerateResponse(List.of(
                     new GeminiGenerateResponse.GeminiSentence(
@@ -351,10 +362,10 @@ class GenerateServiceTest {
                     });
             given(generationHistoryRepository.save(any(GenerationHistory.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            given(wordRepository.existsById(1L)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(1L, testUser)).willReturn(true);
 
             // when
-            generateService.generate(request);
+            generateService.generate(testUser, request);
 
             // then — Gemini 프롬프트에 최대 50개 단어만 전달되었는지 확인
             ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
@@ -385,8 +396,8 @@ class GenerateServiceTest {
                     )
             ));
 
-            given(wordRepository.findByDeletedFalse()).willReturn(sampleWords);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(new PageImpl<>(samplePatterns));
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(sampleWords);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(new PageImpl<>(samplePatterns));
             given(geminiClient.generateContent(anyString(), eq(GeminiGenerateResponse.class)))
                     .willReturn(responseWithBadId);
             given(generatedSentenceRepository.save(any(GeneratedSentence.class)))
@@ -403,11 +414,11 @@ class GenerateServiceTest {
                     });
             given(generationHistoryRepository.save(any(GenerationHistory.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            given(wordRepository.existsById(1L)).willReturn(true);
-            given(wordRepository.existsById(999L)).willReturn(false);
+            given(wordRepository.existsByIdAndUser(1L, testUser)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(999L, testUser)).willReturn(false);
 
             // when
-            GenerateResponse response = generateService.generate(request);
+            GenerateResponse response = generateService.generate(testUser, request);
 
             // then — 예문 자체는 저장됨
             assertThat(response.getSentences()).hasSize(1);
@@ -421,8 +432,8 @@ class GenerateServiceTest {
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 30, null, null);
 
             // Gemini가 2개만 반환 (30개 요청했지만)
-            given(wordRepository.findByDeletedFalse()).willReturn(sampleWords);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(new PageImpl<>(samplePatterns));
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(sampleWords);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(new PageImpl<>(samplePatterns));
             given(geminiClient.generateContent(anyString(), eq(GeminiGenerateResponse.class)))
                     .willReturn(sampleGeminiResponse); // 2개만 반환
             given(generatedSentenceRepository.save(any(GeneratedSentence.class)))
@@ -439,11 +450,11 @@ class GenerateServiceTest {
                     });
             given(generationHistoryRepository.save(any(GenerationHistory.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            given(wordRepository.existsById(1L)).willReturn(true);
-            given(wordRepository.existsById(2L)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(1L, testUser)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(2L, testUser)).willReturn(true);
 
             // when
-            generateService.generate(request);
+            generateService.generate(testUser, request);
 
             // then
             ArgumentCaptor<GenerationHistory> historyCaptor = ArgumentCaptor.forClass(GenerationHistory.class);
@@ -463,8 +474,8 @@ class GenerateServiceTest {
             // given
             GenerateRequest request = new GenerateRequest("ELEMENTARY", 10, null, null);
 
-            given(wordRepository.findByDeletedFalse()).willReturn(sampleWords);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(new PageImpl<>(samplePatterns));
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(sampleWords);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(new PageImpl<>(samplePatterns));
             given(geminiClient.generateContent(anyString(), eq(GeminiGenerateResponse.class)))
                     .willReturn(sampleGeminiResponse);
             given(generatedSentenceRepository.save(any(GeneratedSentence.class)))
@@ -481,14 +492,14 @@ class GenerateServiceTest {
                     });
             given(generationHistoryRepository.save(any(GenerationHistory.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            given(wordRepository.existsById(1L)).willReturn(true);
-            given(wordRepository.existsById(2L)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(1L, testUser)).willReturn(true);
+            given(wordRepository.existsByIdAndUser(2L, testUser)).willReturn(true);
 
             // when
-            generateService.generate(request);
+            generateService.generate(testUser, request);
 
             // then — 예문 2개 → review_item 2개
-            verify(reviewItemService, times(2)).createSentenceReviewItem(any());
+            verify(reviewItemService, times(2)).createSentenceReviewItem(eq(testUser), any());
         }
     }
 
@@ -502,8 +513,8 @@ class GenerateServiceTest {
             // given
             GenerateRequest request = new GenerateRequest("INTERMEDIATE", 10, null, null);
 
-            given(wordRepository.findByDeletedFalse()).willReturn(sampleWords);
-            given(patternRepository.findByDeletedFalse(any())).willReturn(new PageImpl<>(samplePatterns));
+            given(wordRepository.findByUserAndDeletedFalse(testUser)).willReturn(sampleWords);
+            given(patternRepository.findByUserAndDeletedFalse(eq(testUser), any())).willReturn(new PageImpl<>(samplePatterns));
             given(geminiClient.generateContent(anyString(), eq(GeminiGenerateResponse.class)))
                     .willReturn(sampleGeminiResponse);
             given(generatedSentenceRepository.save(any(GeneratedSentence.class)))
@@ -520,10 +531,10 @@ class GenerateServiceTest {
                     });
             given(generationHistoryRepository.save(any(GenerationHistory.class)))
                     .willAnswer(invocation -> invocation.getArgument(0));
-            given(wordRepository.existsById(anyLong())).willReturn(true);
+            given(wordRepository.existsByIdAndUser(anyLong(), eq(testUser))).willReturn(true);
 
             // when
-            generateService.generate(request);
+            generateService.generate(testUser, request);
 
             // then
             ArgumentCaptor<GenerationHistory> captor = ArgumentCaptor.forClass(GenerationHistory.class);
@@ -538,12 +549,12 @@ class GenerateServiceTest {
         @DisplayName("이력 조회 → 페이지네이션")
         void getHistory() {
             // given
-            GenerationHistory history = new GenerationHistory("ELEMENTARY", 10, 10, null, null);
+            GenerationHistory history = new GenerationHistory(testUser, "ELEMENTARY", 10, 10, null, null);
             Page<GenerationHistory> page = new PageImpl<>(List.of(history), PageRequest.of(0, 20), 1);
-            given(generationHistoryRepository.findAllByOrderByCreatedAtDesc(any())).willReturn(page);
+            given(generationHistoryRepository.findByUserOrderByCreatedAtDesc(eq(testUser), any())).willReturn(page);
 
             // when
-            Page<GenerationHistoryResponse> result = generateService.getHistory(PageRequest.of(0, 20));
+            Page<GenerationHistoryResponse> result = generateService.getHistory(testUser, PageRequest.of(0, 20));
 
             // then
             assertThat(result.getContent()).hasSize(1);

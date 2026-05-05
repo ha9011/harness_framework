@@ -1,5 +1,6 @@
 package com.english.setting;
 
+import com.english.auth.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,6 +18,10 @@ public class UserSetting {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @Column(name = "daily_review_count", nullable = false)
     private Integer dailyReviewCount = 10;
 
@@ -26,7 +31,8 @@ public class UserSetting {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public UserSetting(Integer dailyReviewCount) {
+    public UserSetting(User user, Integer dailyReviewCount) {
+        this.user = user;
         this.dailyReviewCount = dailyReviewCount;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
