@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "auth-service",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-05T12:40:34+0900",
+      "summary": "AuthService(signup/login/getMe) + AuthController(signup 201+Cookie, login 200+Cookie, logout 204, me) + DTO(SignupRequest, LoginRequest, AuthResponse, LoginResult) + GlobalExceptionHandler 확장(401 AuthenticationException, 403 ForbiddenException, MethodArgumentNotValidException 400, 일반 Exception 메시지 마스킹). AuthServiceTest 6개 + AuthControllerTest 7개 전체 통과",
+      "completed_at": "2026-05-05T12:45:49+0900"
     },
     {
       "step": 4,
