@@ -53,7 +53,10 @@
     {
       "step": 6,
       "name": "integration-tests",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-05T13:03:45+0900",
+      "summary": "IntegrationTestBase 인증 헬퍼(signupAndGetAuthHeaders/getDefaultAuthHeaders) 추가. 기존 6개 통합 테스트 exchange+authHeaders 방식으로 전환. AuthIntegrationTest 신규(E2E 흐름 4개 + 데이터 격리 3개 = 7개 테스트). SecurityConfig passwordEncoder 중복 제거, SettingService/ReviewService readOnly 트랜잭션 내 INSERT 버그 수정, WordRepository JPQL CAST 추가. 전체 단위+통합 테스트 통과",
+      "completed_at": "2026-05-05T13:23:49+0900"
     },
     {
       "step": 7,
