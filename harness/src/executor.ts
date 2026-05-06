@@ -2,20 +2,20 @@
  * @file executor.ts
  * @description
  *   전체 작업을 순서대로 진행하는 "지휘자" (오케스트레이터).
- *   스텝을 하나씩 꺼내서 Claude에게 시키고, 결과를 저장하고,
+ *   스텝을 하나씩 꺼내서 Codex에게 시키고, 결과를 저장하고,
  *   실패하면 최대 3번까지 재시도한다.
  *   이 파일이 하네스의 핵심 두뇌 역할을 한다.
  *
  * @see cli.ts       - 사용자 명령을 받아 이 파일의 StepExecutor를 실행한다
- * @see claude.ts    - 각 스텝에서 Claude AI를 호출할 때 사용
+ * @see codex.ts     - 각 스텝에서 Codex AI를 호출할 때 사용
  * @see git.ts       - 스텝 완료 후 자동 커밋할 때 사용
- * @see guardrails.ts - Claude에게 보낼 프롬프트를 조립할 때 사용
+ * @see guardrails.ts - AI에게 보낼 프롬프트를 조립할 때 사용
  * @see fsm.ts       - 스텝 상태 전이가 올바른지 검증할 때 사용
  */
 import { existsSync, readFileSync, mkdirSync, renameSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { GitClient } from "./git.js";
-import { ClaudeClient } from "./claude.js";
+import { CodexClient } from "./codex.js";
 import { readJson, writeJson } from "./json-io.js";
 import { kstNow } from "./timestamp.js";
 import { withProgress } from "./progress.js";
@@ -29,11 +29,12 @@ export interface ExecutorOpts {
   autoPush?: boolean;
   dryRun?: boolean;
   rootDir?: string;
+  model?: string;
 }
 
 export interface ExecutorDeps {
   git: GitClient;
-  claude: ClaudeClient;
+  codex: CodexClient;
 }
 
 const MAX_RETRIES = 3;
@@ -47,7 +48,7 @@ export class StepExecutor {
   private readonly indexFile: string;
   private readonly autoPush: boolean;
   private readonly git: GitClient;
-  private readonly claude: ClaudeClient;
+  private readonly codex: CodexClient;
 
   private project: string;
   private phaseName: string;
@@ -63,9 +64,10 @@ export class StepExecutor {
     this.autoPush = opts.autoPush ?? false;
 
     this.git = deps?.git ?? new GitClient(this.root);
-    this.claude = deps?.claude ?? new ClaudeClient({
+    this.codex = deps?.codex ?? new CodexClient({
       cwd: this.root,
       dryRun: opts.dryRun ?? false,
+      model: opts.model,
     });
 
     if (!existsSync(this.phaseDir)) {
@@ -304,9 +306,9 @@ export class StepExecutor {
       const prompt = preamble + stepContent;
       const outputPath = join(this.phaseDir, `step${stepNum}-output.json`);
 
-      // Claude 호출
+      // Codex 호출
       const { elapsed } = await withProgress(tag, async () => {
-        await this.claude.invoke({ step: stepNum, name: stepName, prompt, outputPath });
+        await this.codex.invoke({ step: stepNum, name: stepName, prompt, outputPath });
       });
       const elapsedSec = Math.floor(elapsed);
 
@@ -320,7 +322,7 @@ export class StepExecutor {
         currentStep = updatedIndex.steps.find((s) => s.step === stepNum);
         status = currentStep?.status ?? "pending";
       } catch (err) {
-        // Claude가 index.json을 잘못 수정한 경우 (JSON 깨짐, 필수 필드 누락 등)
+        // Codex가 index.json을 잘못 수정한 경우 (JSON 깨짐, 필수 필드 누락 등)
         parseError = err instanceof Error ? err.message : String(err);
         status = "error";
         console.log(`  WARN: index.json 파싱 실패 — ${parseError.slice(0, 200)}`);

@@ -1,6 +1,6 @@
 ---
 name: prep
-description: /harness 실행 전 문서 준비 스킬. 요구사항을 받아 docs/와 CLAUDE.md를 업데이트하고 리뷰 루프를 거친다. 코드 수정 절대 금지.
+description: /harness 실행 전 문서 준비 스킬. 요구사항을 받아 docs/와 AGENTS.md를 업데이트하고 리뷰 루프를 거친다. 코드 수정 절대 금지.
 ---
 
 `/harness` 실행 전에 프로젝트 문서를 준비하는 스킬이다. **문서만 다루고 코드는 절대 수정하지 않는다.**
@@ -20,7 +20,7 @@ description: /harness 실행 전 문서 준비 스킬. 요구사항을 받아 do
 
 | 파일 | 역할 |
 |------|------|
-| `CLAUDE.md` | 프로젝트 규칙, 기술 스택, 아키텍처 규칙 |
+| `AGENTS.md` | 프로젝트 규칙, 기술 스택, 아키텍처 규칙 |
 | `docs/PRD.md` | 요구사항 (목표, 사용자, 핵심 기능) |
 | `docs/ARCHITECTURE.md` | 디렉토리 구조, 패턴, 데이터 흐름 |
 | `docs/ADR.md` | 기술 결정 이력 |
@@ -35,7 +35,7 @@ description: /harness 실행 전 문서 준비 스킬. 요구사항을 받아 do
 
 1. 사용자의 요구사항을 파악한다.
 2. 기존 문서를 **전부** 읽는다:
-   - `CLAUDE.md`
+   - `AGENTS.md`
    - `docs/PRD.md`
    - `docs/ARCHITECTURE.md`
    - `docs/ADR.md`
@@ -43,10 +43,9 @@ description: /harness 실행 전 문서 준비 스킬. 요구사항을 받아 do
 3. `docs/PLAN.md`가 이미 존재하면 (정상 흐름에서는 executor가 자동 아카이브하므로 남아있지 않음):
    - 이전 작업이 미완료된 것일 수 있다. 사용자에게 알리고 **덮어쓸지 / 아카이브할지** 확인한다.
    - 아카이브 선택 시: `docs/archive/PLAN_{날짜}_{이름}.md`로 이동한 뒤 새로 작성한다.
-4. `.claude/plans/` 디렉토리에 플랜 모드에서 생성된 파일이 있으면 최신 파일을 읽어서 내용을 파악한다.
-5. `CLAUDE.md`가 플레이스홀더 상태(`{프로젝트명}`, `{프레임워크}` 등)인지 확인한다. → P2에서 채운다.
-6. `design/` 디렉토리에 HTML 목업 시안이 있으면 읽어서 UI 스타일을 파악한다. → P2에서 `docs/UI_GUIDE.md`에 반영한다.
-7. 기존 코드베이스를 탐색하여 현재 상태를 파악한다. (**읽기만, 수정 절대 금지**)
+4. `design/` 디렉토리에 HTML 목업 시안이 있으면 읽어서 UI 스타일을 파악한다. → P2에서 `docs/UI_GUIDE.md`에 반영한다.
+5. `AGENTS.md`가 플레이스홀더 상태(`{프로젝트명}`, `{프레임워크}` 등)인지 확인한다. → P2에서 채운다.
+6. 기존 코드베이스를 탐색하여 현재 상태를 파악한다. (**읽기만, 수정 절대 금지**)
 
 ### P2. 문서 초안 작성
 
@@ -58,8 +57,8 @@ description: /harness 실행 전 문서 준비 스킬. 요구사항을 받아 do
 | 2 | `docs/ADR.md` | 새로운 기술 결정이 있으면 ADR-NNN 추가 |
 | 3 | `docs/ARCHITECTURE.md` | 디렉토리 구조/패턴/데이터 흐름 변경 반영 |
 | 4 | `docs/UI_GUIDE.md` | UI 관련 변경이 있으면 업데이트 |
-| 5 | `docs/PLAN.md` | 작업 계획 신규 작성 (`.claude/plans/` 내용 통합) |
-| 6 | `CLAUDE.md` | 플레이스홀더(`{프로젝트명}` 등)가 남아있으면 채운다. 새 아키텍처 규칙이 필요하면 추가 |
+| 5 | `docs/PLAN.md` | 작업 계획 신규 작성 |
+| 6 | `AGENTS.md` | 플레이스홀더(`{프로젝트명}` 등)가 남아있으면 채운다. 새 아키텍처 규칙이 필요하면 추가 |
 
 **원칙:**
 - 기존 내용은 **보존하고 누적 추가**한다.
@@ -79,7 +78,7 @@ description: /harness 실행 전 문서 준비 스킬. 요구사항을 받아 do
 | docs/ADR.md | 변경 없음 | - |
 | docs/ARCHITECTURE.md | 섹션 수정 | composables/에 useXxx 추가 |
 | docs/PLAN.md | 신규 작성 | N step 계획 |
-| CLAUDE.md | 변경 없음 | - |
+| AGENTS.md | 변경 없음 | - |
 
 피드백을 주세요:
 - **승인**: "LGTM" 또는 "승인"
@@ -102,16 +101,6 @@ description: /harness 실행 전 문서 준비 스킬. 요구사항을 받아 do
 문서 준비가 완료되었습니다.
 `/harness`를 실행하여 구현을 시작하세요.
 ```
-
----
-
-## `.claude/plans/` 통합 규칙
-
-플랜 모드에서 생성된 파일을 `docs/PLAN.md`에 반영하는 절차:
-
-1. `.claude/plans/` 내 파일을 최신 수정일 순으로 확인한다.
-2. 현재 요구사항과 관련된 플랜 내용을 `docs/PLAN.md`에 통합한다.
-3. 원본 `.claude/plans/` 파일은 그대로 둔다 (삭제하지 않음).
 
 ---
 

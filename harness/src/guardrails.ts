@@ -1,30 +1,25 @@
 /**
  * @file guardrails.ts
  * @description
- *   CLAUDE.md와 docs/ 폴더에서 프로젝트 규칙을 읽어오는 "규칙서 전달자".
+ *   docs/ 폴더에서 프로젝트 문서를 읽어오는 "규칙서 전달자".
+ *   AGENTS.md는 Codex CLI가 자동으로 시스템 프롬프트에 주입하므로 여기서는 로딩하지 않는다.
  *   읽어온 규칙 + 이전 스텝 요약 + 현재 스텝 정보를 조합해서
- *   Claude에게 보낼 프롬프트(지시문)를 완성한다.
- *   쉽게 말해, Claude에게 "이 규칙 지키면서 이 일 해줘"라고 말해주는 역할.
+ *   AI에게 보낼 프롬프트(지시문)를 완성한다.
+ *   쉽게 말해, AI에게 "이 규칙 지키면서 이 일 해줘"라고 말해주는 역할.
  *
  * @see executor.ts - 스텝 실행 전에 이 파일로 프롬프트를 조립한다
- * @see claude.ts   - 조립된 프롬프트를 Claude에게 전달한다
+ * @see codex.ts    - 조립된 프롬프트를 Codex에게 전달한다
  */
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, basename } from "node:path";
 import type { PhaseIndex } from "./types.js";
 
 /**
- * CLAUDE.md + docs/*.md 내용을 병합하여 가드레일 문자열을 반환한다.
- * Python execute.py의 _load_guardrails() 동일 로직.
+ * docs/*.md 내용을 병합하여 가드레일 문자열을 반환한다.
+ * AGENTS.md는 Codex CLI가 자동으로 주입하므로 여기서 로딩하지 않는다.
  */
 export function loadGuardrails(rootDir: string): string {
   const sections: string[] = [];
-
-  const claudeMd = join(rootDir, "CLAUDE.md");
-  if (existsSync(claudeMd)) {
-    const content = readFileSync(claudeMd, "utf-8");
-    sections.push(`## 프로젝트 규칙 (CLAUDE.md)\n\n${content}`);
-  }
 
   const docsDir = join(rootDir, "docs");
   if (existsSync(docsDir)) {
@@ -70,7 +65,7 @@ export interface PreambleOpts {
 }
 
 /**
- * Claude 프롬프트의 프리앰블(규칙 + 컨텍스트 + 재시도 에러)을 조합한다.
+ * AI 프롬프트의 프리앰블(규칙 + 컨텍스트 + 재시도 에러)을 조합한다.
  * Python execute.py의 _build_preamble() 동일 로직.
  */
 export function buildPreamble(opts: PreambleOpts): string {

@@ -5,12 +5,12 @@ SESSION="AI_PAIR_TEAM"
 
 # 2. 기존 세션이 있다면 종료하고 새로 시작
 tmux kill-session -t $SESSION 2>/dev/null
-tmux new-session -d -s $SESSION -n "Claude-Gemini"
+tmux new-session -d -s $SESSION -n "Codex-Gemini"
 
 # 3. 패널 설정 및 이름 부여
-# [패널 0]: Claude Lead (메인 화면)
-tmux select-pane -t 0 -T "claude-lead"
-tmux send-keys -t 0 "claude" C-m  # Claude CLI 실행
+# [패널 0]: Codex Lead (메인 화면)
+tmux select-pane -t 0 -T "codex-lead"
+tmux send-keys -t 0 "codex" C-m  # Codex CLI 실행
 
 # [패널 1]: Gemini Reviewer (화면 오른쪽 분할)
 tmux split-window -h

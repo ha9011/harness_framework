@@ -4,15 +4,15 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { StepExecutor } from "../src/executor.js";
 import type { GitClient } from "../src/git.js";
-import type { ClaudeClient } from "../src/claude.js";
+import type { CodexClient } from "../src/codex.js";
 
 // --- 헬퍼 ---
 
 function makeTmpProject(steps: Array<Record<string, unknown>>): string {
   const root = mkdtempSync(join(tmpdir(), "harness-exec-"));
 
-  // CLAUDE.md
-  writeFileSync(join(root, "CLAUDE.md"), "# Rules\n- rule one");
+  // AGENTS.md
+  writeFileSync(join(root, "AGENTS.md"), "# Rules\n- rule one");
 
   // docs/
   mkdirSync(join(root, "docs"));
@@ -62,13 +62,13 @@ function mockGit(): GitClient {
   } as unknown as GitClient;
 }
 
-function mockClaude(onInvoke?: (opts: { step: number }) => void): ClaudeClient {
+function mockCodex(onInvoke?: (opts: { step: number }) => void): CodexClient {
   return {
     invoke: vi.fn().mockImplementation(async (opts: { step: number; outputPath: string }) => {
       onInvoke?.(opts);
       return { step: opts.step, name: "", exitCode: 0, stdout: "", stderr: "" };
     }),
-  } as unknown as ClaudeClient;
+  } as unknown as CodexClient;
 }
 
 // --- checkBlockers ---
@@ -86,7 +86,7 @@ describe("StepExecutor — checkBlockers", () => {
 
     const executor = new StepExecutor(
       { phaseDirName: "0-mvp", rootDir: root },
-      { git: mockGit(), claude: mockClaude() },
+      { git: mockGit(), codex: mockCodex() },
     );
 
     expect(() => executor.checkBlockers()).toThrow("exit");
@@ -106,7 +106,7 @@ describe("StepExecutor — checkBlockers", () => {
 
     const executor = new StepExecutor(
       { phaseDirName: "0-mvp", rootDir: root },
-      { git: mockGit(), claude: mockClaude() },
+      { git: mockGit(), codex: mockCodex() },
     );
 
     expect(() => executor.checkBlockers()).toThrow("exit");
@@ -121,7 +121,7 @@ describe("StepExecutor — checkBlockers", () => {
 
     const executor = new StepExecutor(
       { phaseDirName: "0-mvp", rootDir: root },
-      { git: mockGit(), claude: mockClaude() },
+      { git: mockGit(), codex: mockCodex() },
     );
 
     expect(() => executor.checkBlockers()).not.toThrow();
@@ -142,7 +142,7 @@ describe("StepExecutor — 생성자", () => {
     expect(() =>
       new StepExecutor(
         { phaseDirName: "nonexistent", rootDir: root },
-        { git: mockGit(), claude: mockClaude() },
+        { git: mockGit(), codex: mockCodex() },
       ),
     ).toThrow("exit");
     expect(mockExit).toHaveBeenCalledWith(1);
@@ -160,7 +160,7 @@ describe("StepExecutor — 생성자", () => {
     expect(() =>
       new StepExecutor(
         { phaseDirName: "empty", rootDir: root },
-        { git: mockGit(), claude: mockClaude() },
+        { git: mockGit(), codex: mockCodex() },
       ),
     ).toThrow("exit");
     expect(mockExit).toHaveBeenCalledWith(1);
@@ -178,8 +178,8 @@ describe("StepExecutor — run (통합)", () => {
     makeTopIndex(root);
 
     const git = mockGit();
-    // Claude가 호출되면 index.json을 completed로 업데이트
-    const claude = mockClaude(() => {
+    // Codex가 호출되면 index.json을 completed로 업데이트
+    const codex = mockCodex(() => {
       const indexPath = join(root, "phases", "0-mvp", "index.json");
       const idx = JSON.parse(readFileSync(indexPath, "utf-8"));
       idx.steps[0].status = "completed";
@@ -193,13 +193,13 @@ describe("StepExecutor — run (통합)", () => {
 
     const executor = new StepExecutor(
       { phaseDirName: "0-mvp", rootDir: root },
-      { git, claude },
+      { git, codex },
     );
 
     await executor.run();
 
-    // Claude 호출 확인
-    expect(claude.invoke).toHaveBeenCalledTimes(1);
+    // Codex 호출 확인
+    expect(codex.invoke).toHaveBeenCalledTimes(1);
     // git commit 호출 확인
     expect(git.commitStep).toHaveBeenCalledTimes(1);
     // checkoutBranch 호출 확인
@@ -216,7 +216,7 @@ describe("StepExecutor — run (통합)", () => {
     makeTopIndex(root);
 
     const git = mockGit();
-    const claude = mockClaude(() => {
+    const codex = mockCodex(() => {
       const indexPath = join(root, "phases", "0-mvp", "index.json");
       const idx = JSON.parse(readFileSync(indexPath, "utf-8"));
       idx.steps[1].status = "completed";
@@ -230,14 +230,14 @@ describe("StepExecutor — run (통합)", () => {
 
     const executor = new StepExecutor(
       { phaseDirName: "0-mvp", rootDir: root },
-      { git, claude },
+      { git, codex },
     );
 
     await executor.run();
 
     // step 1만 실행
-    expect(claude.invoke).toHaveBeenCalledTimes(1);
-    const invokeCall = (claude.invoke as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(codex.invoke).toHaveBeenCalledTimes(1);
+    const invokeCall = (codex.invoke as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(invokeCall.step).toBe(1);
 
     mockExit.mockRestore();
@@ -255,7 +255,7 @@ describe("StepExecutor — 재시도 exhaustion", () => {
 
     let invokeCount = 0;
     const git = mockGit();
-    const claude = mockClaude(() => {
+    const codex = mockCodex(() => {
       invokeCount++;
       const indexPath = join(root, "phases", "0-mvp", "index.json");
       const idx = JSON.parse(readFileSync(indexPath, "utf-8"));
@@ -270,7 +270,7 @@ describe("StepExecutor — 재시도 exhaustion", () => {
 
     const executor = new StepExecutor(
       { phaseDirName: "0-mvp", rootDir: root },
-      { git, claude },
+      { git, codex },
     );
 
     await expect(executor.run()).rejects.toThrow("exit");
@@ -298,7 +298,7 @@ describe("StepExecutor — top index 업데이트", () => {
     makeTopIndex(root);
 
     const git = mockGit();
-    const claude = mockClaude(() => {
+    const codex = mockCodex(() => {
       const indexPath = join(root, "phases", "0-mvp", "index.json");
       const idx = JSON.parse(readFileSync(indexPath, "utf-8"));
       idx.steps[0].status = "completed";
@@ -312,7 +312,7 @@ describe("StepExecutor — top index 업데이트", () => {
 
     const executor = new StepExecutor(
       { phaseDirName: "0-mvp", rootDir: root },
-      { git, claude },
+      { git, codex },
     );
 
     await executor.run();

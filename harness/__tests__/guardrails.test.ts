@@ -12,7 +12,7 @@ import type { PhaseIndex } from "../src/types.js";
 function makeTmpProject(): string {
   const dir = mkdtempSync(join(tmpdir(), "harness-guard-"));
 
-  writeFileSync(join(dir, "CLAUDE.md"), "# Rules\n- rule one\n- rule two");
+  writeFileSync(join(dir, "AGENTS.md"), "# Rules\n- rule one\n- rule two");
 
   const docsDir = join(dir, "docs");
   mkdirSync(docsDir);
@@ -25,11 +25,10 @@ function makeTmpProject(): string {
 // --- loadGuardrails ---
 
 describe("loadGuardrails", () => {
-  it("CLAUDE.md와 docs/*.md 로드", () => {
+  it("docs/*.md만 로드 (AGENTS.md는 Codex가 자동 주입)", () => {
     const dir = makeTmpProject();
     const result = loadGuardrails(dir);
-    expect(result).toContain("# Rules");
-    expect(result).toContain("rule one");
+    expect(result).not.toContain("rule one"); // AGENTS.md 내용 미포함
     expect(result).toContain("# Architecture");
     expect(result).toContain("# Guide");
   });
@@ -48,27 +47,26 @@ describe("loadGuardrails", () => {
     expect(archPos).toBeLessThan(guidePos);
   });
 
-  it("CLAUDE.md 없을 때", () => {
+  it("AGENTS.md 없을 때", () => {
     const dir = mkdtempSync(join(tmpdir(), "harness-guard-"));
     const docsDir = join(dir, "docs");
     mkdirSync(docsDir);
     writeFileSync(join(docsDir, "arch.md"), "# Architecture");
 
     const result = loadGuardrails(dir);
-    expect(result).not.toContain("CLAUDE.md");
+    expect(result).not.toContain("AGENTS.md");
     expect(result).toContain("Architecture");
   });
 
-  it("docs 디렉토리 없을 때", () => {
+  it("docs 디렉토리 없을 때 빈 문자열", () => {
     const dir = mkdtempSync(join(tmpdir(), "harness-guard-"));
-    writeFileSync(join(dir, "CLAUDE.md"), "# Rules");
 
     const result = loadGuardrails(dir);
-    expect(result).toContain("Rules");
-    expect(result).not.toContain("Architecture");
+    expect(result).toBe("");
   });
 
-  it("빈 프로젝트 (CLAUDE.md도 docs도 없음)", () => {
+  it("빈 프로젝트 (AGENTS.md도 docs도 없음)", () => {
+
     const dir = mkdtempSync(join(tmpdir(), "harness-guard-"));
     const result = loadGuardrails(dir);
     expect(result).toBe("");

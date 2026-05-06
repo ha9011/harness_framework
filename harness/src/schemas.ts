@@ -106,7 +106,7 @@ export const MutablePhaseIndexSchema = z.object({
   completed_at: z.string().optional(),
 });
 
-// --- Claude 실행 출력 ---
+// --- Codex 실행 출력 ---
 
 export const StepOutputSchema = z.object({
   step: z.number().int().nonnegative(),

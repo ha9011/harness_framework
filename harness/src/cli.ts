@@ -17,12 +17,14 @@ program
   .description("Harness Step Executor — phase 내 step을 순차 실행하고 자가 교정한다.")
   .argument("<phase-dir>", "Phase 디렉토리명 (예: 0-mvp)")
   .option("--push", "완료 후 브랜치를 원격에 push", false)
-  .option("--dry-run", "Claude를 호출하지 않고 프롬프트만 출력", false)
-  .action(async (phaseDir: string, options: { push: boolean; dryRun: boolean }) => {
+  .option("--dry-run", "Codex를 호출하지 않고 프롬프트만 출력", false)
+  .option("--model <model>", "Codex 모델 지정 (기본: o3)")
+  .action(async (phaseDir: string, options: { push: boolean; dryRun: boolean; model?: string }) => {
     const executor = new StepExecutor({
       phaseDirName: phaseDir,
       autoPush: options.push,
       dryRun: options.dryRun,
+      model: options.model,
     });
 
     await executor.run();

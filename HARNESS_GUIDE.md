@@ -24,7 +24,7 @@
 - **Zod 스키마 검증**: index.json 구조를 런타임에서 검증
 - **자가 교정 루프**: 실패 시 최대 3회 재시도, 이전 에러 메시지를 다음 시도에 피드백
 - **2단계 커밋**: 코드 변경(feat)과 메타데이터(chore)를 분리 커밋
-- **가드레일 주입**: CLAUDE.md + docs/*.md를 매 step 프롬프트에 포함
+- **가드레일 주입**: AGENTS.md + docs/*.md를 매 step 프롬프트에 포함
 
 ### 사용자가 프로세스 레벨에서 강제하는 것
 
@@ -50,5 +50,5 @@
 
 실제 워크플로우는 스킬 파일을 참조하라:
 
-- **문서 준비**: `.claude/skills/prep/SKILL.md` — `/prep` P1~P5
-- **코드 구현**: `.claude/skills/harness/SKILL.md` — `/harness` 0~F
+- **문서 준비**: `.codex/skills/prep/SKILL.md` — `/prep` P1~P5
+- **코드 구현**: `.codex/skills/harness/SKILL.md` — `/harness` 0~F

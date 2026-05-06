@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ClaudeClient } from "../src/claude.js";
+import { CodexClient } from "../src/codex.js";
 import * as fs from "node:fs";
 import { join } from "node:path";
 import { mkdtempSync } from "node:fs";
@@ -16,13 +16,8 @@ import { spawn } from "node:child_process";
 const mockSpawn = vi.mocked(spawn);
 
 function tmpFile(name: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "harness-claude-"));
+  const dir = mkdtempSync(join(tmpdir(), "harness-codex-"));
   return join(dir, name);
-}
-
-/** mock stdin 스트림을 생성한다 */
-function createMockStdin() {
-  return { write: vi.fn(), end: vi.fn() };
 }
 
 /** mock ChildProcess를 생성한다 */
@@ -37,7 +32,7 @@ function createMockChild(exitCode: number, stdout: string, stderr: string) {
   const stderrEmitter = new EventEmitter() as EventEmitter & { setEncoding: ReturnType<typeof vi.fn> };
   stdoutEmitter.setEncoding = vi.fn();
   stderrEmitter.setEncoding = vi.fn();
-  child.stdin = createMockStdin();
+  child.stdin = { write: vi.fn(), end: vi.fn() };
   child.stdout = stdoutEmitter;
   child.stderr = stderrEmitter;
   child.kill = vi.fn();
@@ -52,16 +47,17 @@ function createMockChild(exitCode: number, stdout: string, stderr: string) {
   return child;
 }
 
-describe("ClaudeClient", () => {
+describe("CodexClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("invoke — 일반 모드", () => {
-    it("claude CLI를 올바른 인자로 호출", async () => {
-      mockSpawn.mockReturnValue(createMockChild(0, '{"result": "ok"}', "") as unknown as ChildProcess);
+    it("codex exec를 올바른 인자로 호출", async () => {
+      const jsonlOutput = '{"type":"TaskCompleted","last_agent_message":"done"}\n';
+      mockSpawn.mockReturnValue(createMockChild(0, jsonlOutput, "") as unknown as ChildProcess);
       const outputPath = tmpFile("output.json");
-      const client = new ClaudeClient({ cwd: "/test" });
+      const client = new CodexClient({ cwd: "/test" });
 
       const result = await client.invoke({
         step: 0,
@@ -71,8 +67,8 @@ describe("ClaudeClient", () => {
       });
 
       expect(mockSpawn).toHaveBeenCalledWith(
-        "claude",
-        ["-p", "--dangerously-skip-permissions", "--output-format", "json"],
+        "codex",
+        expect.arrayContaining(["exec", "--json", "-"]),
         expect.objectContaining({ cwd: "/test" }),
       );
       expect(result.exitCode).toBe(0);
@@ -81,9 +77,10 @@ describe("ClaudeClient", () => {
     });
 
     it("output JSON 파일 저장", async () => {
-      mockSpawn.mockReturnValue(createMockChild(0, '{"ok": true}', "") as unknown as ChildProcess);
+      const jsonlOutput = '{"type":"TaskCompleted","last_agent_message":"ok"}\n';
+      mockSpawn.mockReturnValue(createMockChild(0, jsonlOutput, "") as unknown as ChildProcess);
       const outputPath = tmpFile("output.json");
-      const client = new ClaudeClient({ cwd: "/test" });
+      const client = new CodexClient({ cwd: "/test" });
 
       await client.invoke({ step: 2, name: "ui", prompt: "test", outputPath });
 
@@ -93,10 +90,10 @@ describe("ClaudeClient", () => {
       expect(saved.exitCode).toBe(0);
     });
 
-    it("Claude 비정상 종료 시 에러 정보 반환", async () => {
+    it("Codex 비정상 종료 시 에러 정보 반환", async () => {
       mockSpawn.mockReturnValue(createMockChild(1, "", "something went wrong") as unknown as ChildProcess);
       const outputPath = tmpFile("output.json");
-      const client = new ClaudeClient({ cwd: "/test" });
+      const client = new CodexClient({ cwd: "/test" });
 
       const result = await client.invoke({
         step: 0,
@@ -107,6 +104,44 @@ describe("ClaudeClient", () => {
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain("something went wrong");
+    });
+  });
+
+  describe("invoke — JSONL 파싱", () => {
+    it("TaskCompleted 이벤트에서 last_agent_message 추출", async () => {
+      const jsonlOutput = [
+        '{"type":"ItemCompleted","item":{"type":"AgentMessage","content":[{"type":"output_text","text":"중간 응답"}]}}',
+        '{"type":"TaskCompleted","last_agent_message":"최종 응답입니다"}',
+      ].join("\n") + "\n";
+
+      mockSpawn.mockReturnValue(createMockChild(0, jsonlOutput, "") as unknown as ChildProcess);
+      const outputPath = tmpFile("output.json");
+      const client = new CodexClient({ cwd: "/test" });
+
+      const result = await client.invoke({ step: 0, name: "test", prompt: "p", outputPath });
+      expect(result.stdout).toBe("최종 응답입니다");
+    });
+
+    it("ItemCompleted AgentMessage에서 텍스트 추출", async () => {
+      const jsonlOutput = '{"type":"ItemCompleted","item":{"type":"AgentMessage","content":[{"type":"output_text","text":"AI 응답 텍스트"}]}}\n';
+
+      mockSpawn.mockReturnValue(createMockChild(0, jsonlOutput, "") as unknown as ChildProcess);
+      const outputPath = tmpFile("output.json");
+      const client = new CodexClient({ cwd: "/test" });
+
+      const result = await client.invoke({ step: 0, name: "test", prompt: "p", outputPath });
+      expect(result.stdout).toBe("AI 응답 텍스트");
+    });
+
+    it("비JSON 출력은 원본 그대로 반환", async () => {
+      const plainOutput = "이것은 일반 텍스트 출력입니다\n";
+
+      mockSpawn.mockReturnValue(createMockChild(0, plainOutput, "") as unknown as ChildProcess);
+      const outputPath = tmpFile("output.json");
+      const client = new CodexClient({ cwd: "/test" });
+
+      const result = await client.invoke({ step: 0, name: "test", prompt: "p", outputPath });
+      expect(result.stdout).toContain("일반 텍스트");
     });
   });
 
@@ -122,7 +157,7 @@ describe("ClaudeClient", () => {
       const stderrEmitter = new EventEmitter() as EventEmitter & { setEncoding: ReturnType<typeof vi.fn> };
       stdoutEmitter.setEncoding = vi.fn();
       stderrEmitter.setEncoding = vi.fn();
-      child.stdin = createMockStdin();
+      child.stdin = { write: vi.fn(), end: vi.fn() };
       child.stdout = stdoutEmitter;
       child.stderr = stderrEmitter;
       child.kill = vi.fn();
@@ -133,7 +168,7 @@ describe("ClaudeClient", () => {
 
       mockSpawn.mockReturnValue(child as unknown as ChildProcess);
       const outputPath = tmpFile("output.json");
-      const client = new ClaudeClient({ cwd: "/test" });
+      const client = new CodexClient({ cwd: "/test" });
 
       const result = await client.invoke({
         step: 0,
@@ -157,7 +192,7 @@ describe("ClaudeClient", () => {
       const stderrEmitter = new EventEmitter() as EventEmitter & { setEncoding: ReturnType<typeof vi.fn> };
       stdoutEmitter.setEncoding = vi.fn();
       stderrEmitter.setEncoding = vi.fn();
-      child.stdin = createMockStdin();
+      child.stdin = { write: vi.fn(), end: vi.fn() };
       child.stdout = stdoutEmitter;
       child.stderr = stderrEmitter;
       child.kill = vi.fn().mockImplementation(() => {
@@ -168,7 +203,7 @@ describe("ClaudeClient", () => {
       mockSpawn.mockReturnValue(child as unknown as ChildProcess);
       const outputPath = tmpFile("output.json");
       // 타임아웃을 50ms로 설정
-      const client = new ClaudeClient({ cwd: "/test", timeoutMs: 50 });
+      const client = new CodexClient({ cwd: "/test", timeoutMs: 50 });
 
       const result = await client.invoke({
         step: 0,
@@ -185,7 +220,7 @@ describe("ClaudeClient", () => {
   describe("invoke — dry-run 모드", () => {
     it("subprocess를 호출하지 않음", async () => {
       const outputPath = tmpFile("output.json");
-      const client = new ClaudeClient({ cwd: "/test", dryRun: true });
+      const client = new CodexClient({ cwd: "/test", dryRun: true });
 
       const result = await client.invoke({
         step: 0,
@@ -201,7 +236,7 @@ describe("ClaudeClient", () => {
 
     it("output 파일은 저장됨", async () => {
       const outputPath = tmpFile("output.json");
-      const client = new ClaudeClient({ cwd: "/test", dryRun: true });
+      const client = new CodexClient({ cwd: "/test", dryRun: true });
 
       await client.invoke({ step: 1, name: "core", prompt: "x", outputPath });
 
