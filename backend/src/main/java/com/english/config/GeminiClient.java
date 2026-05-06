@@ -23,7 +23,7 @@ public class GeminiClient {
     private final long[] retryDelaysMs;
 
     private static final String DEFAULT_API_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     private static final int MAX_RETRIES = 3;
 
     @org.springframework.beans.factory.annotation.Autowired

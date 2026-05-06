@@ -28,13 +28,16 @@ public class Word {
     @Column(nullable = false)
     private String meaning;
 
-    @Column(name = "part_of_speech")
+    @Column(name = "part_of_speech", length = 500)
     private String partOfSpeech;
 
+    @Column(length = 500)
     private String pronunciation;
 
+    @Column(length = 1000)
     private String synonyms;
 
+    @Column(length = 1000)
     private String tip;
 
     @Column(name = "is_important", nullable = false)
