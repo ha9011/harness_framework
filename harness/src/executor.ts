@@ -22,7 +22,11 @@ import { withProgress } from "./progress.js";
 import { loadGuardrails, buildStepContext, buildPreamble } from "./guardrails.js";
 import { PhaseIndexSchema, MutablePhaseIndexSchema, TopIndexSchema } from "./schemas.js";
 import { StepFSM } from "./fsm.js";
-import type { PhaseIndex, MutablePhaseIndex, Step, TopIndex } from "./types.js";
+import type { PhaseIndex, MutablePhaseIndex, Step, ErrorStep, BlockedStep, TopIndex } from "./types.js";
+
+type Blocker =
+  | { type: "error"; step: ErrorStep }
+  | { type: "blocked"; step: BlockedStep };
 
 export interface ExecutorOpts {
   phaseDirName: string;
@@ -46,6 +50,7 @@ export class StepExecutor {
   private readonly topIndexFile: string;
   private readonly indexFile: string;
   private readonly autoPush: boolean;
+  private readonly dryRun: boolean;
   private readonly git: GitClient;
   private readonly claude: ClaudeClient;
 
@@ -61,6 +66,7 @@ export class StepExecutor {
     this.topIndexFile = join(this.phasesDir, "index.json");
     this.indexFile = join(this.phaseDir, "index.json");
     this.autoPush = opts.autoPush ?? false;
+    this.dryRun = opts.dryRun ?? false;
 
     this.git = deps?.git ?? new GitClient(this.root);
     this.claude = deps?.claude ?? new ClaudeClient({
@@ -86,6 +92,12 @@ export class StepExecutor {
 
   async run(): Promise<void> {
     this.printHeader();
+
+    if (this.dryRun) {
+      await this.dryRunAllSteps();
+      return;
+    }
+
     this.checkBlockers();
     await this.git.checkoutBranch(this.phaseName);
     const guardrails = loadGuardrails(this.root);
@@ -102,6 +114,61 @@ export class StepExecutor {
     console.log(`  Phase: ${this.phaseName} | Steps: ${this.total}`);
     if (this.autoPush) console.log(`  Auto-push: enabled`);
     console.log(`${"=".repeat(60)}`);
+  }
+
+  // --- dry-run: 프롬프트만 출력, 부수효과 없음 ---
+
+  private async dryRunAllSteps(): Promise<void> {
+    // blocker 검사 — 실제 실행과 동일한 사전 조건 확인
+    const blocker = this.findBlocker();
+    if (blocker) {
+      const { type, step: s } = blocker;
+      if (type === "error") {
+        console.log(`\n  ✗ [DRY-RUN] Step ${s.step} (${s.name}) failed.`);
+        console.log(`  Error: ${s.error_message}`);
+        console.log(`  Fix and reset status to 'pending' to retry.`);
+      } else {
+        console.log(`\n  ⏸ [DRY-RUN] Step ${s.step} (${s.name}) blocked.`);
+        console.log(`  Reason: ${s.blocked_reason}`);
+        console.log(`  Resolve and reset status to 'pending' to retry.`);
+      }
+      process.exit(type === "error" ? 1 : 2);
+    }
+
+    const index = readJson(this.indexFile, PhaseIndexSchema);
+    const guardrails = loadGuardrails(this.root);
+    const stepContext = buildStepContext(index);
+
+    const pending = index.steps.filter((s) => s.status === "pending");
+    if (pending.length === 0) {
+      console.log("\n  All steps already completed. Nothing to dry-run.");
+      return;
+    }
+
+    for (const step of pending) {
+      const preamble = buildPreamble({
+        project: this.project,
+        phaseName: this.phaseName,
+        phaseDirName: this.phaseDirName,
+        guardrails,
+        stepContext,
+        maxRetries: MAX_RETRIES,
+      });
+
+      const stepFile = join(this.phaseDir, `step${step.step}.md`);
+      if (!existsSync(stepFile)) {
+        console.log(`  ERROR: ${stepFile} not found`);
+        process.exit(1);
+      }
+      const stepContent = readFileSync(stepFile, "utf-8");
+      const prompt = preamble + stepContent;
+
+      console.log(`\n${"=".repeat(60)}`);
+      console.log(`  [DRY-RUN] Step ${step.step}: ${step.name}`);
+      console.log(`${"=".repeat(60)}`);
+      console.log(prompt);
+      console.log(`${"=".repeat(60)}\n`);
+    }
   }
 
   // --- 진행 상태 테이블 ---
@@ -164,25 +231,34 @@ export class StepExecutor {
 
   // --- blocker 체크 ---
 
-  checkBlockers(): void {
+  /** blocker를 찾아 반환한다. 부수효과 없음. */
+  private findBlocker(): Blocker | undefined {
     const index = readJson(this.indexFile, PhaseIndexSchema);
     const steps = [...index.steps].reverse();
 
     for (const s of steps) {
-      if (s.status === "error") {
-        console.log(`\n  ✗ Step ${s.step} (${s.name}) failed.`);
-        console.log(`  Error: ${s.error_message}`);
-        console.log(`  Fix and reset status to 'pending' to retry.`);
-        process.exit(1);
-      }
-      if (s.status === "blocked") {
-        console.log(`\n  ⏸ Step ${s.step} (${s.name}) blocked.`);
-        console.log(`  Reason: ${s.blocked_reason}`);
-        console.log(`  Resolve and reset status to 'pending' to retry.`);
-        process.exit(2);
-      }
+      if (s.status === "error") return { type: "error", step: s };
+      if (s.status === "blocked") return { type: "blocked", step: s };
       if (s.status !== "pending") break;
     }
+    return undefined;
+  }
+
+  checkBlockers(): void {
+    const blocker = this.findBlocker();
+    if (!blocker) return;
+
+    const { type, step: s } = blocker;
+    if (type === "error") {
+      console.log(`\n  ✗ Step ${s.step} (${s.name}) failed.`);
+      console.log(`  Error: ${s.error_message}`);
+      console.log(`  Fix and reset status to 'pending' to retry.`);
+      process.exit(1);
+    }
+    console.log(`\n  ⏸ Step ${s.step} (${s.name}) blocked.`);
+    console.log(`  Reason: ${s.blocked_reason}`);
+    console.log(`  Resolve and reset status to 'pending' to retry.`);
+    process.exit(2);
   }
 
   // --- 타임스탬프 초기화 ---
@@ -497,16 +573,24 @@ export class StepExecutor {
     writeJson(this.indexFile, mutable);
     this.updateTopIndex("completed");
 
-    // 최종 커밋 — phases/ 디렉토리만 스테이징
+    // PLAN.md 아카이브 — 커밋 전에 실행하여 변경사항이 커밋에 포함되도록 함
+    const archivedFile = this.archivePlan();
+
+    // 최종 커밋 — phase 디렉토리, top index, 아카이브된 파일만 스테이징
     await this.git.run("add", this.phaseDir);
+    if (existsSync(this.topIndexFile)) {
+      await this.git.run("add", this.topIndexFile);
+    }
+    if (archivedFile) {
+      await this.git.run("add", archivedFile);
+      // 원본 PLAN.md 삭제도 stage (renameSync는 git에서 delete + add)
+      await this.git.run("add", join(this.root, "docs", "PLAN.md"));
+    }
     if ((await this.git.run("diff", "--cached", "--quiet")).returncode !== 0) {
       const msg = `chore(${this.phaseName}): mark phase completed`;
       const r = await this.git.run("commit", "-m", msg);
       if (r.returncode === 0) console.log(`  ✓ ${msg}`);
     }
-
-    // PLAN.md 아카이브 — 다음 /prep과의 충돌 방지
-    this.archivePlan();
 
     // auto push
     if (this.autoPush) {
@@ -526,9 +610,9 @@ export class StepExecutor {
    * 다음 /prep 실행 시 기존 PLAN.md가 남아있으면 충돌이 발생하므로,
    * finalize 시점에 자동으로 아카이브한다.
    */
-  private archivePlan(): void {
+  private archivePlan(): string | undefined {
     const planFile = join(this.root, "docs", "PLAN.md");
-    if (!existsSync(planFile)) return;
+    if (!existsSync(planFile)) return undefined;
 
     const archiveDir = join(this.root, "docs", "archive");
     if (!existsSync(archiveDir)) {
@@ -541,5 +625,6 @@ export class StepExecutor {
     const archiveFile = join(archiveDir, archiveName);
     renameSync(planFile, archiveFile);
     console.log(`  ✓ PLAN.md → docs/archive/${archiveName}`);
+    return archiveFile;
   }
 }

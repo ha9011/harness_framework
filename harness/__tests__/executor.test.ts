@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { join } from "node:path";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { StepExecutor } from "../src/executor.js";
 import type { GitClient } from "../src/git.js";
@@ -283,6 +283,176 @@ describe("StepExecutor — 재시도 exhaustion", () => {
     );
     expect(finalIndex.steps[0].status).toBe("error");
     expect(finalIndex.steps[0].error_message).toContain("3회 시도 후 실패");
+
+    mockExit.mockRestore();
+  });
+});
+
+// --- dry-run ---
+
+describe("StepExecutor — dry-run", () => {
+  it("브랜치 checkout, created_at 기록, Claude 호출 없이 프롬프트만 출력", async () => {
+    const root = makeTmpProject([
+      { step: 0, name: "setup", status: "pending" },
+    ]);
+
+    const git = mockGit();
+    const claude = mockClaude();
+
+    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    const executor = new StepExecutor(
+      { phaseDirName: "0-mvp", dryRun: true, rootDir: root },
+      { git, claude },
+    );
+
+    await executor.run();
+
+    // Claude를 호출하지 않음
+    expect(claude.invoke).not.toHaveBeenCalled();
+    // 브랜치 checkout 하지 않음
+    expect(git.checkoutBranch).not.toHaveBeenCalled();
+    // created_at 기록하지 않음
+    const idx = JSON.parse(readFileSync(join(root, "phases", "0-mvp", "index.json"), "utf-8"));
+    expect(idx.created_at).toBeUndefined();
+
+    mockExit.mockRestore();
+  });
+
+  it("error step이 있으면 dry-run도 exit(1)", async () => {
+    const root = makeTmpProject([
+      { step: 0, name: "ok", status: "completed", summary: "완료" },
+      { step: 1, name: "bad", status: "error", error_message: "실패함" },
+    ]);
+
+    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    const executor = new StepExecutor(
+      { phaseDirName: "0-mvp", dryRun: true, rootDir: root },
+      { git: mockGit(), claude: mockClaude() },
+    );
+
+    await expect(executor.run()).rejects.toThrow("exit");
+    expect(mockExit).toHaveBeenCalledWith(1);
+
+    mockExit.mockRestore();
+  });
+
+  it("step 파일 누락 시 exit(1)", async () => {
+    const root = makeTmpProject([
+      { step: 0, name: "setup", status: "pending" },
+    ]);
+    // step 파일 삭제
+    const stepFile = join(root, "phases", "0-mvp", "step0.md");
+    require("node:fs").unlinkSync(stepFile);
+
+    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    const executor = new StepExecutor(
+      { phaseDirName: "0-mvp", dryRun: true, rootDir: root },
+      { git: mockGit(), claude: mockClaude() },
+    );
+
+    await expect(executor.run()).rejects.toThrow("exit");
+    expect(mockExit).toHaveBeenCalledWith(1);
+
+    mockExit.mockRestore();
+  });
+});
+
+// --- archivePlan ---
+
+describe("StepExecutor — archivePlan", () => {
+  it("완료 시 PLAN.md가 docs/archive/로 이동되고 커밋에 포함됨", async () => {
+    const root = makeTmpProject([
+      { step: 0, name: "setup", status: "pending" },
+    ]);
+    makeTopIndex(root);
+
+    // PLAN.md 생성
+    writeFileSync(join(root, "docs", "PLAN.md"), "# Plan\n기능 구현 계획");
+
+    const git = mockGit();
+    const claude = mockClaude(() => {
+      const indexPath = join(root, "phases", "0-mvp", "index.json");
+      const idx = JSON.parse(readFileSync(indexPath, "utf-8"));
+      idx.steps[0].status = "completed";
+      idx.steps[0].summary = "완료";
+      writeFileSync(indexPath, JSON.stringify(idx, null, 2));
+    });
+
+    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    const executor = new StepExecutor(
+      { phaseDirName: "0-mvp", rootDir: root },
+      { git, claude },
+    );
+
+    await executor.run();
+
+    // PLAN.md가 사라짐
+    expect(existsSync(join(root, "docs", "PLAN.md"))).toBe(false);
+    // archive 디렉토리에 이동됨
+    expect(existsSync(join(root, "docs", "archive"))).toBe(true);
+    const archiveFiles = require("node:fs").readdirSync(join(root, "docs", "archive"));
+    expect(archiveFiles.length).toBe(1);
+    expect(archiveFiles[0]).toMatch(/^PLAN_\d{8}_\d{6}_0-mvp\.md$/);
+
+    // git add가 archive 파일을 stage했는지 확인
+    const addCalls = (git.run as ReturnType<typeof vi.fn>).mock.calls;
+    const addedPaths = addCalls
+      .filter((c: string[]) => c[0] === "add")
+      .map((c: string[]) => c[1]);
+    // archive 파일이 stage됨 (docs/archive/PLAN_...md 경로)
+    expect(addedPaths.some((p: string) => p.includes("docs/archive/PLAN_"))).toBe(true);
+
+    mockExit.mockRestore();
+  });
+
+  it("PLAN.md가 없으면 아카이브 건너뜀", async () => {
+    const root = makeTmpProject([
+      { step: 0, name: "setup", status: "pending" },
+    ]);
+    makeTopIndex(root);
+    // PLAN.md 없음
+
+    const git = mockGit();
+    const claude = mockClaude(() => {
+      const indexPath = join(root, "phases", "0-mvp", "index.json");
+      const idx = JSON.parse(readFileSync(indexPath, "utf-8"));
+      idx.steps[0].status = "completed";
+      idx.steps[0].summary = "완료";
+      writeFileSync(indexPath, JSON.stringify(idx, null, 2));
+    });
+
+    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    const executor = new StepExecutor(
+      { phaseDirName: "0-mvp", rootDir: root },
+      { git, claude },
+    );
+
+    await executor.run();
+
+    // archive 디렉토리가 생성되지 않음
+    expect(existsSync(join(root, "docs", "archive"))).toBe(false);
+
+    // git add에 archive 관련 호출 없음
+    const addCalls = (git.run as ReturnType<typeof vi.fn>).mock.calls;
+    const addedPaths = addCalls
+      .filter((c: string[]) => c[0] === "add")
+      .map((c: string[]) => c[1]);
+    expect(addedPaths.some((p: string) => typeof p === "string" && p.includes("archive"))).toBe(false);
 
     mockExit.mockRestore();
   });
