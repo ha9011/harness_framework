@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 36 50% 96%;
+    --foreground: 28 28% 19%;
+    --card: 33 100% 98%;
+    --card-foreground: 28 28% 19%;
+    --popover: 33 100% 98%;
+    --popover-foreground: 28 28% 19%;
+    --primary: 30 33% 49%;
+    --primary-foreground: 33 100% 98%;
+    --secondary: 34 40% 91%;
+    --secondary-foreground: 28 28% 19%;
+    --muted: 34 40% 91%;
+    --muted-foreground: 27 14% 53%;
+    --accent: 83 17% 49%;
+    --accent-foreground: 33 100% 98%;
+    --destructive: 23 51% 53%;
+    --destructive-foreground: 33 100% 98%;
+    --border: 28 28% 19%;
+    --input: 34 40% 91%;
+    --ring: 30 33% 49%;
+    --radius: 0.875rem;
+    --cafe-bg: #FAF6F0;
+    --cafe-raised: #FFFCF7;
+    --cafe-soft: #F2EADD;
+    --cafe-ink: #3D2E22;
+    --cafe-hairline: rgba(61, 46, 34, 0.10);
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    background: var(--cafe-bg);
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background: var(--cafe-bg);
+    color: var(--cafe-ink);
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
