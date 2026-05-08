@@ -125,7 +125,10 @@
     {
       "step": 15,
       "name": "backend-study-controller",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T21:32:21+0900",
+      "summary": "StudyRecordController로 GET /api/study-records를 구현하고 페이지네이션·최신순 item DTO·미인증 401·사용자별 격리를 MockMvc 테스트로 검증했다.",
+      "completed_at": "2026-05-08T21:38:49+0900"
     },
     {
       "step": 16,
