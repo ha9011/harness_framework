@@ -2,7 +2,8 @@
   "phases": [
     {
       "dir": "english-mvp",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:27:25+0900"
     }
   ]
 }

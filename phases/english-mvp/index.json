@@ -214,7 +214,9 @@
     {
       "step": 27,
       "name": "integration-hardening",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:27:25+0900",
+      "summary": "통합 hardening으로 CORS credentials 설정, /api/words/extract 및 /api/patterns/extract 계약, 루트 npm 스크립트, README/MANUAL_TEST 실행 절차를 정리하고 npm run test/lint/build 및 docker compose up -d를 통과시켰다."
     }
   ],
   "created_at": "2026-05-08T13:13:12+0900"
