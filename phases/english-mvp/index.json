@@ -165,37 +165,51 @@
     {
       "step": 20,
       "name": "frontend-home-dashboard",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:17:54+0900",
+      "summary": "홈 대시보드 화면을 실제 /api/dashboard 계약에 맞춰 구현하고 로딩·빈 상태·오류·최근 학습 기록·주요 CTA를 MSW 테스트로 검증했다."
     },
     {
       "step": 21,
       "name": "frontend-history-screen",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:17:54+0900",
+      "summary": "학습 기록 화면을 GET /api/study-records 페이지네이션 계약에 맞춰 구현하고 다음/이전 페이지 이동과 빈 상태를 테스트로 검증했다."
     },
     {
       "step": 22,
       "name": "frontend-settings-screen",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:17:54+0900",
+      "summary": "설정 화면에서 daily_review_count 10/20/30 선택·저장·로그아웃 진입점을 구현하고 PUT /api/settings/daily_review_count 요청 계약을 테스트로 검증했다."
     },
     {
       "step": 23,
       "name": "frontend-word-screens",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:17:54+0900",
+      "summary": "단어 목록·상세·수동 등록·대량 등록·이미지 추출 확인·중요 토글·단어 기반 예문 생성 진입점을 구현하고 테스트로 검증했다."
     },
     {
       "step": 24,
       "name": "frontend-pattern-screens",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:17:54+0900",
+      "summary": "패턴 목록·상세·수동 등록·이미지 추출 확인·패턴 기반 예문 생성 진입점을 구현하고 예문 순서 보존을 테스트로 검증했다."
     },
     {
       "step": 25,
       "name": "frontend-generate-screen",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:17:54+0900",
+      "summary": "예문 생성 화면에서 전체/단어/패턴 기반 생성, 난이도·개수 선택, 결과·빈 데이터·AI 오류 상태 표시를 구현하고 테스트로 검증했다."
     },
     {
       "step": 26,
       "name": "frontend-review-screen",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-05-09T08:17:54+0900",
+      "summary": "복습 화면에서 WORD/PATTERN/SENTENCE 탭, 카드 뒤집기, EASY/MEDIUM/HARD 제출, exclude 기반 추가 카드 로딩을 구현하고 테스트로 검증했다."
     },
     {
       "step": 27,
