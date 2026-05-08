@@ -149,10 +149,10 @@
     {
       "step": 18,
       "name": "frontend-scaffold",
-      "status": "error",
-      "started_at": "2026-05-08T21:50:02+0900",
-      "error_message": "[3회 시도 후 실패] Step did not update status",
-      "failed_at": "2026-05-08T21:50:12+0900"
+      "status": "completed",
+      "started_at": "2026-05-09T07:43:25+0900",
+      "summary": "frontend/에 Next.js App Router, Tailwind, Vitest/Testing Library/MSW, QueryProvider, API client, Cozy Cafe 디자인 토큰과 기본 shell/UI 컴포넌트를 구성하고 test/lint/build로 검증했다.",
+      "completed_at": "2026-05-09T07:55:58+0900"
     },
     {
       "step": 19,
