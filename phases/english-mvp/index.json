@@ -133,7 +133,10 @@
     {
       "step": 16,
       "name": "backend-settings-controller",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T21:38:49+0900",
+      "summary": "UserSettingController로 GET /api/settings와 PUT /api/settings/{key}, 숫자/문자열 daily_review_count 처리 및 400 예외 매핑을 MockMvc 테스트로 검증했다.",
+      "completed_at": "2026-05-08T21:45:56+0900"
     },
     {
       "step": 17,
