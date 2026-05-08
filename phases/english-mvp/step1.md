@@ -16,7 +16,7 @@
 - `/docs/ARCHITECTURE.md`
 - `/docs/ADR.md`
 - `/API설계서.md`
-- `/phases/0-mvp/index.json`
+- `/phases/english-mvp/index.json`
 - `/backend/build.gradle`
 - `/backend/src/main/java/com/english/EnglishApplication.java`
 

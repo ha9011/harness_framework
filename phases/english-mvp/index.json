@@ -1,6 +1,6 @@
 {
   "project": "영어 패턴 학습기",
-  "phase": "0-mvp",
+  "phase": "english-mvp",
   "steps": [
     { "step": 0, "name": "backend-scaffold", "status": "pending" },
     { "step": 1, "name": "backend-auth-domain", "status": "pending" },

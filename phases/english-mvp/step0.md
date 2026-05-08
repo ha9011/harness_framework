@@ -46,7 +46,7 @@ cd backend && ./gradlew test
 1. 위 AC 커맨드를 실행한다.
 2. Testcontainers 기반 PostgreSQL 연결과 Spring context load가 통과하는지 확인한다.
 3. `/api/health`가 인증 없이 200 OK를 반환하는지 MockMvc로 확인한다.
-4. `phases/0-mvp/index.json`의 Step 0을 `completed`로 바꾸고, summary에 생성된 backend scaffold와 핵심 테스트명을 적는다.
+4. `phases/english-mvp/index.json`의 Step 0을 `completed`로 바꾸고, summary에 생성된 backend scaffold와 핵심 테스트명을 적는다.
 
 ## 금지사항
 
