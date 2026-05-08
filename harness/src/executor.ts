@@ -22,6 +22,7 @@ import { withProgress } from "./progress.js";
 import { loadGuardrails, buildStepContext, buildPreamble } from "./guardrails.js";
 import { PhaseIndexSchema, MutablePhaseIndexSchema, TopIndexSchema } from "./schemas.js";
 import { StepFSM } from "./fsm.js";
+import { lintStepContract } from "./step-lint.js";
 import type { PhaseIndex, MutablePhaseIndex, Step, TopIndex } from "./types.js";
 
 export interface ExecutorOpts {
@@ -89,11 +90,39 @@ export class StepExecutor {
   async run(): Promise<void> {
     this.printHeader();
     this.checkBlockers();
+    this.lintStepFiles();
     await this.git.checkoutBranch(this.phaseName);
     const guardrails = loadGuardrails(this.root);
     this.ensureCreatedAt();
     await this.executeAllSteps(guardrails);
     await this.finalize();
+  }
+
+  private lintStepFiles(): void {
+    const index = readJson(this.indexFile, PhaseIndexSchema);
+    const errors: string[] = [];
+
+    for (const step of index.steps) {
+      const stepFile = join(this.phaseDir, `step${step.step}.md`);
+      if (!existsSync(stepFile)) {
+        errors.push(`Step ${step.step}: ${stepFile} not found`);
+        continue;
+      }
+
+      const result = lintStepContract({
+        stepNum: step.step,
+        content: readFileSync(stepFile, "utf-8"),
+      });
+      errors.push(...result.errors);
+    }
+
+    if (errors.length > 0) {
+      console.log("\n  ERROR: step lint failed");
+      for (const error of errors) {
+        console.log(`  - ${error}`);
+      }
+      process.exit(1);
+    }
   }
 
   // --- 헤더 ---

@@ -36,7 +36,20 @@ function makeTmpProject(steps: Array<Record<string, unknown>>): string {
   for (const s of steps) {
     writeFileSync(
       join(root, "phases", "0-mvp", `step${s.step}.md`),
-      `# Step ${s.step}: ${s.name}\n\n작업을 수행하세요.`,
+      `# Step ${s.step}: ${s.name}
+
+## Step Contract
+
+- Capability: ${s.name}
+- Layer: service
+- Write Scope: backend/${s.name}.ts
+- Out of Scope: frontend, controller, external API client
+- Critical Gates: npm test -- backend/${s.name}.test.ts verifies ${s.name} behavior
+
+## 작업
+
+작업을 수행하세요.
+`,
     );
   }
 
@@ -239,6 +252,41 @@ describe("StepExecutor — run (통합)", () => {
     expect(codex.invoke).toHaveBeenCalledTimes(1);
     const invokeCall = (codex.invoke as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(invokeCall.step).toBe(1);
+
+    mockExit.mockRestore();
+  });
+});
+
+// --- step lint ---
+
+describe("StepExecutor — step lint", () => {
+  it("invalid step contract면 Codex 호출 전 exit(1)", async () => {
+    const root = makeTmpProject([
+      { step: 0, name: "setup", status: "pending" },
+    ]);
+    makeTopIndex(root);
+
+    writeFileSync(
+      join(root, "phases", "0-mvp", "step0.md"),
+      "# Step 0: setup\n\n## 작업\n\n작업을 수행하세요.\n",
+    );
+
+    const git = mockGit();
+    const codex = mockCodex();
+    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    const executor = new StepExecutor(
+      { phaseDirName: "0-mvp", rootDir: root },
+      { git, codex },
+    );
+
+    await expect(executor.run()).rejects.toThrow("exit");
+
+    expect(codex.invoke).not.toHaveBeenCalled();
+    expect(git.checkoutBranch).not.toHaveBeenCalled();
+    expect(mockExit).toHaveBeenCalledWith(1);
 
     mockExit.mockRestore();
   });
