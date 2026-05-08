@@ -1,0 +1,10 @@
+{
+  "name": "english-project-root",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build && ./backend/gradlew -p backend bootJar -x test",
+    "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix frontend run test && ./backend/gradlew -p backend test"
+  }
+}
