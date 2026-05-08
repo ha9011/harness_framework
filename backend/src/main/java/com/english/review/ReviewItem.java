@@ -86,6 +86,15 @@ public class ReviewItem {
 		this.deleted = true;
 	}
 
+	public void recordResult(ReviewResult result, Sm2Schedule schedule, Instant reviewedAt) {
+		this.lastResult = result;
+		this.lastReviewedAt = reviewedAt;
+		this.reviewCount += 1;
+		this.intervalDays = schedule.intervalDays();
+		this.easeFactor = schedule.easeFactor();
+		this.nextReviewDate = schedule.nextReviewDate();
+	}
+
 	public Long getId() {
 		return id;
 	}
