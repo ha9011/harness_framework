@@ -57,6 +57,10 @@ public class UserSetting {
 		return dailyReviewCount;
 	}
 
+	public void updateDailyReviewCount(int dailyReviewCount) {
+		this.dailyReviewCount = dailyReviewCount;
+	}
+
 	public Instant getCreatedAt() {
 		return createdAt;
 	}
