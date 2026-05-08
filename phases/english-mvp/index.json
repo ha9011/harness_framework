@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "backend-auth-domain",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T13:23:25+0900",
+      "summary": "V1__create_users.sql로 users 테이블을 추가하고 User, UserRepository, SignupRequest, LoginRequest, CurrentUserResponse와 UserMigrationTest/UserRepositoryTest를 구현했다.",
+      "completed_at": "2026-05-08T13:26:55+0900"
     },
     {
       "step": 2,
