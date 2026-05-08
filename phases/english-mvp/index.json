@@ -77,10 +77,10 @@
     {
       "step": 9,
       "name": "backend-review-service",
-      "status": "error",
-      "started_at": "2026-05-08T14:31:52+0900",
-      "error_message": "[3회 시도 후 실패] Step did not update status",
-      "failed_at": "2026-05-08T14:31:59+0900"
+      "status": "completed",
+      "started_at": "2026-05-08T20:43:35+0900",
+      "summary": "ReviewService와 Sm2Scheduler를 추가해 타입별 복습 덱 선정, 카드 조립, review_logs 저장, EASY/MEDIUM/HARD 간격 갱신을 테스트로 검증했다.",
+      "completed_at": "2026-05-08T20:56:08+0900"
     },
     {
       "step": 10,
