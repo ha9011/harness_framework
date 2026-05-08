@@ -117,7 +117,10 @@
     {
       "step": 14,
       "name": "backend-review-controller",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T21:22:24+0900",
+      "summary": "ReviewController로 GET /api/reviews/today와 POST /api/reviews/{reviewItemId}, exclude/result validation, ReviewException HTTP 매핑을 구현하고 MockMvc 테스트로 검증했다.",
+      "completed_at": "2026-05-08T21:32:21+0900"
     },
     {
       "step": 15,
