@@ -101,7 +101,10 @@
     {
       "step": 12,
       "name": "backend-dashboard-service",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T21:05:30+0900",
+      "summary": "DashboardService와 StreakCalculator를 추가해 사용자별 active 단어/패턴/문장 수, 타입별 오늘 남은 복습 수, 최근 학습 기록 5건, review_logs 기반 streak 집계를 테스트로 검증했다.",
+      "completed_at": "2026-05-08T21:13:24+0900"
     },
     {
       "step": 13,
