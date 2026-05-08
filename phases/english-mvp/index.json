@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "backend-auth-service",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T13:26:55+0900",
+      "summary": "AuthService/JwtProvider와 도메인 예외, BCrypt 설정을 추가하고 회원가입·로그인·JWT 발급/검증 테스트를 통과시켰다.",
+      "completed_at": "2026-05-08T13:34:28+0900"
     },
     {
       "step": 3,
