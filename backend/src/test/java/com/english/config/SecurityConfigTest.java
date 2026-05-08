@@ -72,7 +72,8 @@ class SecurityConfigTest {
 
 		mockMvc.perform(get("/api/words")
 						.cookie(new Cookie(TOKEN_COOKIE, signup.token())))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content").isArray());
 	}
 
 	@Test

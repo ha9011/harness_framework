@@ -1,11 +1,18 @@
 package com.english.pattern;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record PatternUpdateRequest(
+		@NotBlank
+		@Size(max = 255)
 		String template,
+		@NotBlank
+		@Size(max = 500)
 		String description,
-		List<PatternExampleRequest> examples
+		List<@Valid PatternExampleRequest> examples
 ) {
 
 	public PatternUpdateRequest {

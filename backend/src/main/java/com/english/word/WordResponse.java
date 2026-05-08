@@ -1,5 +1,6 @@
 package com.english.word;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 
 public record WordResponse(
@@ -10,6 +11,7 @@ public record WordResponse(
 		String pronunciation,
 		String synonyms,
 		String tip,
+		@JsonProperty("isImportant")
 		boolean important,
 		Instant createdAt,
 		Instant updatedAt
