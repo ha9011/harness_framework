@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "backend-auth-controller",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T13:34:29+0900",
+      "summary": "AuthController, JWT Cookie 발급/삭제, JwtAuthenticationFilter, JSON 401 entry point, /api/** 인증 경계와 MockMvc 테스트를 구현했다.",
+      "completed_at": "2026-05-08T13:42:13+0900"
     },
     {
       "step": 4,
