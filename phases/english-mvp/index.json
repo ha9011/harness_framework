@@ -5,7 +5,10 @@
     {
       "step": 0,
       "name": "backend-scaffold",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T13:14:24+0900",
+      "summary": "backend/에 Spring Boot 3.5.7 Gradle wrapper scaffold, /api/health, 공통 에러 응답, SecurityConfig, Testcontainers ContextLoadsTest와 HealthControllerTest를 추가했다.",
+      "completed_at": "2026-05-08T13:23:25+0900"
     },
     {
       "step": 1,
