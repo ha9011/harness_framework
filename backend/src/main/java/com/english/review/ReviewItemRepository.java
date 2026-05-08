@@ -18,4 +18,9 @@ public interface ReviewItemRepository extends JpaRepository<ReviewItem, Long> {
 			ReviewItemType itemType,
 			Long itemId,
 			ReviewDirection direction);
+
+	List<ReviewItem> findByUserIdAndItemTypeAndDirectionAndDeletedFalse(
+			Long userId,
+			ReviewItemType itemType,
+			ReviewDirection direction);
 }

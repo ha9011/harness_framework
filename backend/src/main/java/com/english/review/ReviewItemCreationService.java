@@ -30,6 +30,16 @@ public class ReviewItemCreationService {
 	}
 
 	@Transactional
+	public void createSentenceReviewItem(User user, Long sentenceId, LocalDate nextReviewDate) {
+		createIfMissing(
+				user,
+				ReviewItemType.SENTENCE,
+				sentenceId,
+				ReviewDirection.RECOGNITION,
+				nextReviewDate);
+	}
+
+	@Transactional
 	public void softDeleteReviewItems(User user, ReviewItemType itemType, Long itemId) {
 		reviewItemRepository.findByUserIdAndItemTypeAndItemIdAndDeletedFalse(
 						user.getId(),
