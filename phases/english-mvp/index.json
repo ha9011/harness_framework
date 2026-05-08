@@ -141,7 +141,10 @@
     {
       "step": 17,
       "name": "backend-dashboard-controller",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T21:45:56+0900",
+      "summary": "DashboardController로 GET /api/dashboard를 구현하고 인증, 응답 구조, 사용자별 집계 범위를 MockMvc 테스트로 검증했다.",
+      "completed_at": "2026-05-08T21:50:02+0900"
     },
     {
       "step": 18,
