@@ -52,6 +52,15 @@ public class Pattern {
 		this.description = description;
 	}
 
+	public void update(String template, String description) {
+		this.template = template;
+		this.description = description;
+	}
+
+	public void softDelete() {
+		this.deleted = true;
+	}
+
 	public Long getId() {
 		return id;
 	}

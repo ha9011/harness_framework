@@ -67,6 +67,30 @@ public class Word {
 		this.meaning = meaning;
 	}
 
+	public void update(
+			String word,
+			String meaning,
+			String partOfSpeech,
+			String pronunciation,
+			String synonyms,
+			String tip
+	) {
+		this.word = word;
+		this.meaning = meaning;
+		this.partOfSpeech = partOfSpeech;
+		this.pronunciation = pronunciation;
+		this.synonyms = synonyms;
+		this.tip = tip;
+	}
+
+	public void toggleImportant() {
+		this.important = !this.important;
+	}
+
+	public void softDelete() {
+		this.deleted = true;
+	}
+
 	public Long getId() {
 		return id;
 	}

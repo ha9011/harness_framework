@@ -82,6 +82,10 @@ public class ReviewItem {
 		this.nextReviewDate = nextReviewDate;
 	}
 
+	public void softDelete() {
+		this.deleted = true;
+	}
+
 	public Long getId() {
 		return id;
 	}
