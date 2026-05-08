@@ -109,7 +109,10 @@
     {
       "step": 13,
       "name": "backend-generate-controller",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T21:13:24+0900",
+      "summary": "GenerateController로 POST /api/generate, /api/generate/word, /api/generate/pattern, GET /api/generate/history를 구현하고 요청 검증·사용자 범위·GenerateException HTTP 매핑을 MockMvc 테스트로 검증했다.",
+      "completed_at": "2026-05-08T21:22:23+0900"
     },
     {
       "step": 14,
