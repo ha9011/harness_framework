@@ -124,7 +124,7 @@ public class GlobalExceptionHandler {
 
 	private static HttpStatus statusOf(GenerateErrorCode errorCode) {
 		return switch (errorCode) {
-			case BAD_REQUEST, NO_WORDS, NO_PATTERNS -> HttpStatus.BAD_REQUEST;
+			case BAD_REQUEST, INVALID_IMAGE_FORMAT, NO_WORDS, NO_PATTERNS -> HttpStatus.BAD_REQUEST;
 			case NOT_FOUND -> HttpStatus.NOT_FOUND;
 			case FORBIDDEN -> HttpStatus.FORBIDDEN;
 			case AI_SERVICE_ERROR -> HttpStatus.BAD_GATEWAY;

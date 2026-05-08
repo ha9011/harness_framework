@@ -21,6 +21,10 @@ public class GenerateException extends RuntimeException {
 		return new GenerateException(GenerateErrorCode.FORBIDDEN, message);
 	}
 
+	public static GenerateException invalidImageFormat() {
+		return new GenerateException(GenerateErrorCode.INVALID_IMAGE_FORMAT, "지원하지 않는 이미지 형식입니다");
+	}
+
 	public static GenerateException noWords() {
 		return new GenerateException(GenerateErrorCode.NO_WORDS, "예문 생성에 사용할 단어가 없습니다");
 	}
@@ -31,6 +35,10 @@ public class GenerateException extends RuntimeException {
 
 	public static GenerateException aiServiceError() {
 		return new GenerateException(GenerateErrorCode.AI_SERVICE_ERROR, "예문 생성에 실패했습니다");
+	}
+
+	public static GenerateException aiServiceError(String message) {
+		return new GenerateException(GenerateErrorCode.AI_SERVICE_ERROR, message);
 	}
 
 	public GenerateErrorCode getErrorCode() {

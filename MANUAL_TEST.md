@@ -2,12 +2,24 @@
 
 > 순서대로 진행. 각 항목 체크(✅/❌) 후 비고 기록.
 
+## 현재 실행/검증 명령
+
+```bash
+docker compose up -d
+npm run dev
+npm run test
+npm run lint
+npm run build
+```
+
+- `npm run dev`는 백엔드 8080과 프론트엔드 3000을 함께 실행한다.
+- `GEMINI_API_KEY`가 없으면 이미지 추출/예문 생성은 실패 메시지가 명확히 보이는지만 확인한다.
+
 ## 사전 조건
 
 - [ ] Docker Desktop 실행 중
 - [ ] `docker compose up -d` → PostgreSQL 기동 확인
-- [ ] `cd backend && ./gradlew bootRun --args='--spring.profiles.active=local'` → 8080 기동
-- [ ] `cd frontend && npm run dev` → 3000 기동
+- [ ] `npm run dev` → 백엔드 8080, 프론트엔드 3000 기동
 - [ ] 브라우저에서 http://localhost:3000 접속
 
 ---

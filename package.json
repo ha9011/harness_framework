@@ -2,9 +2,11 @@
   "name": "english-project-root",
   "private": true,
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
+    "dev": "sh -c './backend/gradlew -p backend bootRun & backend_pid=$!; npm --prefix frontend run dev; status=$?; kill $backend_pid 2>/dev/null || true; wait $backend_pid 2>/dev/null || true; exit $status'",
+    "dev:backend": "./backend/gradlew -p backend bootRun",
+    "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build && ./backend/gradlew -p backend bootJar -x test",
     "lint": "npm --prefix frontend run lint",
-    "test": "npm --prefix frontend run test && ./backend/gradlew -p backend test"
+    "test": "npm --prefix frontend run test -- --run && ./backend/gradlew -p backend test"
   }
 }
