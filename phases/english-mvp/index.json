@@ -93,7 +93,10 @@
     {
       "step": 11,
       "name": "backend-settings-service",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T21:01:20+0900",
+      "summary": "UserSettingService를 추가해 기본 daily_review_count lazy creation, 10/20/30 검증, 사용자별 설정 격리, ReviewService용 조회 메서드를 테스트로 검증했다.",
+      "completed_at": "2026-05-08T21:05:30+0900"
     },
     {
       "step": 12,
