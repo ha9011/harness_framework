@@ -61,7 +61,10 @@
     {
       "step": 7,
       "name": "backend-gemini-client",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T14:13:30+0900",
+      "summary": "GeminiClient 인터페이스와 GeminiApiClient를 추가하고 GeminiClientFakeServerTest/GeminiClientFallbackTest로 API key, structured schema, parsing, retry/fallback 계약을 검증했다.",
+      "completed_at": "2026-05-08T14:22:16+0900"
     },
     {
       "step": 8,
