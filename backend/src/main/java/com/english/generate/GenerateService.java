@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,6 +105,13 @@ public class GenerateService {
 		}
 
 		return generateAndPersist(user, options, null, pattern, words, List.of(pattern));
+	}
+
+	@Transactional(readOnly = true)
+	public Page<GenerationHistoryResponse> getHistory(Long userId, Pageable pageable) {
+		findUser(userId);
+		return generationHistoryRepository.findByUserIdOrderByCreatedAtDescIdDesc(userId, pageable)
+				.map(GenerationHistoryResponse::from);
 	}
 
 	private GenerateResponse generateAndPersist(
