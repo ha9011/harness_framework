@@ -53,7 +53,10 @@
     {
       "step": 6,
       "name": "backend-learning-controller",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T14:01:11+0900",
+      "summary": "WordController/PatternController, PageResponse, 요청 validation, Word/Pattern 예외 HTTP 매핑, MockMvc 테스트를 추가해 단어/패턴 CRUD·페이지네이션·403 계약을 구현했다. ⚠️ 테스트 변경: /api/words가 실제 구현되어 SecurityConfigTest의 인증 후 기대값을 404에서 200 empty page로 갱신했다.",
+      "completed_at": "2026-05-08T14:13:30+0900"
     },
     {
       "step": 7,
