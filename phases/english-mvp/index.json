@@ -157,7 +157,10 @@
     {
       "step": 19,
       "name": "frontend-auth-shell",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-09T07:56:45+0900",
+      "summary": "AuthProvider/useAuth, /login·/signup 화면, 보호 AppShell 리다이렉트와 로그아웃 흐름을 구현하고 MSW 기반 인증 테스트 및 build로 검증했다.",
+      "completed_at": "2026-05-09T08:04:05+0900"
     },
     {
       "step": 20,
