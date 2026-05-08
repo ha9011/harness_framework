@@ -6,6 +6,8 @@ import com.english.generate.GenerateErrorCode;
 import com.english.generate.GenerateException;
 import com.english.pattern.PatternErrorCode;
 import com.english.pattern.PatternException;
+import com.english.review.ReviewErrorCode;
+import com.english.review.ReviewException;
 import com.english.word.WordErrorCode;
 import com.english.word.WordException;
 import jakarta.validation.ConstraintViolationException;
@@ -68,6 +70,13 @@ public class GlobalExceptionHandler {
 				.body(new ApiErrorResponse(exception.getErrorCode().name(), exception.getMessage()));
 	}
 
+	@ExceptionHandler(ReviewException.class)
+	public ResponseEntity<ApiErrorResponse> handleReview(ReviewException exception) {
+		HttpStatus status = statusOf(exception.getErrorCode());
+		return ResponseEntity.status(status)
+				.body(new ApiErrorResponse(exception.getErrorCode().name(), exception.getMessage()));
+	}
+
 	@ExceptionHandler(ErrorResponseException.class)
 	public ResponseEntity<ApiErrorResponse> handleErrorResponse(ErrorResponseException exception) {
 		HttpStatus status = HttpStatus.valueOf(exception.getStatusCode().value());
@@ -119,6 +128,14 @@ public class GlobalExceptionHandler {
 			case NOT_FOUND -> HttpStatus.NOT_FOUND;
 			case FORBIDDEN -> HttpStatus.FORBIDDEN;
 			case AI_SERVICE_ERROR -> HttpStatus.BAD_GATEWAY;
+		};
+	}
+
+	private static HttpStatus statusOf(ReviewErrorCode errorCode) {
+		return switch (errorCode) {
+			case BAD_REQUEST -> HttpStatus.BAD_REQUEST;
+			case NOT_FOUND -> HttpStatus.NOT_FOUND;
+			case FORBIDDEN -> HttpStatus.FORBIDDEN;
 		};
 	}
 }
