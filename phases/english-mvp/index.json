@@ -45,7 +45,10 @@
     {
       "step": 5,
       "name": "backend-learning-service",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T13:50:28+0900",
+      "summary": "WordService/PatternService와 StudyRecordService, ReviewItemCreationService를 구현해 중복 처리, 사용자별 격리, 학습 기록 및 양방향 review_items 자동 생성, soft delete 범위 제한을 테스트로 고정했다.",
+      "completed_at": "2026-05-08T14:01:11+0900"
     },
     {
       "step": 6,
