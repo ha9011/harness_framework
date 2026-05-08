@@ -1,7 +1,5 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -14,7 +12,7 @@ export class ApiError extends Error {
 }
 
 type ApiFetchOptions = RequestInit & {
-  json?: JsonValue;
+  json?: unknown;
 };
 
 function resolveApiUrl(path: string) {
