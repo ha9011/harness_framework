@@ -69,7 +69,10 @@
     {
       "step": 8,
       "name": "backend-generate-service",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-08T14:22:16+0900",
+      "summary": "GenerateService를 추가해 후보 우선순위 기반 Gemini 예문 생성, generation_history/generated_sentences 매핑 저장, 상황 5개 저장, SENTENCE review_item 생성을 fake client 테스트로 검증했다.",
+      "completed_at": "2026-05-08T14:31:51+0900"
     },
     {
       "step": 9,
