@@ -32,11 +32,24 @@ function makeTmpProject(steps: Array<Record<string, unknown>>): string {
     JSON.stringify(index, null, 2),
   );
 
-  // step 파일 생성
+  // step 파일 생성 (Step Contract 포함)
   for (const s of steps) {
     writeFileSync(
       join(root, "phases", "0-mvp", `step${s.step}.md`),
-      `# Step ${s.step}: ${s.name}\n\n작업을 수행하세요.`,
+      `# Step ${s.step}: ${s.name}
+
+## Step Contract
+
+- Capability: ${s.name}
+- Layer: service
+- Write Scope: backend/${s.name}.ts
+- Out of Scope: frontend, controller, external API client
+- Critical Gates: npm test -- backend/${s.name}.test.ts verifies ${s.name} behavior
+
+## 작업
+
+작업을 수행하세요.
+`,
     );
   }
 
@@ -406,13 +419,13 @@ describe("StepExecutor — archivePlan", () => {
     expect(archiveFiles.length).toBe(1);
     expect(archiveFiles[0]).toMatch(/^PLAN_\d{8}_\d{6}_0-mvp\.md$/);
 
-    // git add가 archive 파일을 stage했는지 확인
+    // git add가 docs/ 디렉토리를 stage했는지 확인
     const addCalls = (git.run as ReturnType<typeof vi.fn>).mock.calls;
     const addedPaths = addCalls
       .filter((c: string[]) => c[0] === "add")
       .map((c: string[]) => c[1]);
-    // archive 파일이 stage됨 (docs/archive/PLAN_...md 경로)
-    expect(addedPaths.some((p: string) => p.includes("docs/archive/PLAN_"))).toBe(true);
+    // docs/ 디렉토리가 stage됨 (archive + DEFERRED.md 포함)
+    expect(addedPaths.some((p: string) => typeof p === "string" && p.endsWith("docs"))).toBe(true);
 
     mockExit.mockRestore();
   });
@@ -497,6 +510,44 @@ describe("StepExecutor — top index 업데이트", () => {
     // 다른 phase는 변경 없음
     const polish = topIndex.phases.find((p: Record<string, unknown>) => p.dir === "1-polish");
     expect(polish.status).toBe("pending");
+
+    mockExit.mockRestore();
+  });
+});
+
+// --- step lint ---
+
+describe("StepExecutor — step lint", () => {
+  it("invalid step contract면 Claude 호출 전 exit(1)", async () => {
+    const root = makeTmpProject([
+      { step: 0, name: "setup", status: "pending" },
+    ]);
+    makeTopIndex(root);
+
+    // Step Contract 없는 step 파일로 덮어쓰기
+    writeFileSync(
+      join(root, "phases", "0-mvp", "step0.md"),
+      "# Step 0: setup\n\n## 작업\n\n작업을 수행하세요.\n",
+    );
+
+    const git = mockGit();
+    const claude = mockClaude();
+    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("exit");
+    });
+
+    const executor = new StepExecutor(
+      { phaseDirName: "0-mvp", rootDir: root },
+      { git, claude },
+    );
+
+    await expect(executor.run()).rejects.toThrow("exit");
+
+    // Claude를 호출하지 않음
+    expect(claude.invoke).not.toHaveBeenCalled();
+    // 브랜치 checkout 하지 않음
+    expect(git.checkoutBranch).not.toHaveBeenCalled();
+    expect(mockExit).toHaveBeenCalledWith(1);
 
     mockExit.mockRestore();
   });

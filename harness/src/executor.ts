@@ -12,7 +12,7 @@
  * @see guardrails.ts - Claude에게 보낼 프롬프트를 조립할 때 사용
  * @see fsm.ts       - 스텝 상태 전이가 올바른지 검증할 때 사용
  */
-import { existsSync, readFileSync, mkdirSync, renameSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, renameSync, appendFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { GitClient } from "./git.js";
 import { ClaudeClient } from "./claude.js";
@@ -22,6 +22,7 @@ import { withProgress } from "./progress.js";
 import { loadGuardrails, buildStepContext, buildPreamble } from "./guardrails.js";
 import { PhaseIndexSchema, MutablePhaseIndexSchema, TopIndexSchema } from "./schemas.js";
 import { StepFSM } from "./fsm.js";
+import { lintStepContract } from "./step-lint.js";
 import type { PhaseIndex, MutablePhaseIndex, Step, ErrorStep, BlockedStep, TopIndex } from "./types.js";
 
 type Blocker =
@@ -98,6 +99,7 @@ export class StepExecutor {
       return;
     }
 
+    this.lintStepFiles();
     this.checkBlockers();
     await this.git.checkoutBranch(this.phaseName);
     const guardrails = loadGuardrails(this.root);
@@ -114,6 +116,35 @@ export class StepExecutor {
     console.log(`  Phase: ${this.phaseName} | Steps: ${this.total}`);
     if (this.autoPush) console.log(`  Auto-push: enabled`);
     console.log(`${"=".repeat(60)}`);
+  }
+
+  // --- step lint ---
+
+  private lintStepFiles(): void {
+    const index = readJson(this.indexFile, PhaseIndexSchema);
+    const errors: string[] = [];
+
+    for (const step of index.steps) {
+      const stepFile = join(this.phaseDir, `step${step.step}.md`);
+      if (!existsSync(stepFile)) {
+        errors.push(`Step ${step.step}: ${stepFile} not found`);
+        continue;
+      }
+
+      const result = lintStepContract({
+        stepNum: step.step,
+        content: readFileSync(stepFile, "utf-8"),
+      });
+      errors.push(...result.errors);
+    }
+
+    if (errors.length > 0) {
+      console.log("\n  ERROR: step lint failed");
+      for (const error of errors) {
+        console.log(`  - ${error}`);
+      }
+      process.exit(1);
+    }
   }
 
   // --- dry-run: 프롬프트만 출력, 부수효과 없음 ---
@@ -573,18 +604,17 @@ export class StepExecutor {
     writeJson(this.indexFile, mutable);
     this.updateTopIndex("completed");
 
-    // PLAN.md 아카이브 — 커밋 전에 실행하여 변경사항이 커밋에 포함되도록 함
-    const archivedFile = this.archivePlan();
+    // 미룬 작업 리포트 → docs/DEFERRED.md (커밋 전에 실행)
+    this.saveDeferredReport();
 
-    // 최종 커밋 — phase 디렉토리, top index, 아카이브된 파일만 스테이징
+    // PLAN.md 아카이브 — 다음 /prep과의 충돌 방지
+    this.archivePlan();
+
+    // 최종 커밋 — phases/, docs/ 스테이징
     await this.git.run("add", this.phaseDir);
-    if (existsSync(this.topIndexFile)) {
-      await this.git.run("add", this.topIndexFile);
-    }
-    if (archivedFile) {
-      await this.git.run("add", archivedFile);
-      // 원본 PLAN.md 삭제도 stage (renameSync는 git에서 delete + add)
-      await this.git.run("add", join(this.root, "docs", "PLAN.md"));
+    const docsDir = join(this.root, "docs");
+    if (existsSync(docsDir)) {
+      await this.git.run("add", docsDir);
     }
     if ((await this.git.run("diff", "--cached", "--quiet")).returncode !== 0) {
       const msg = `chore(${this.phaseName}): mark phase completed`;
@@ -603,6 +633,44 @@ export class StepExecutor {
     console.log(`${"=".repeat(60)}`);
   }
 
+  // --- 미룬 작업 리포트 ---
+
+  /**
+   * 완료된 step의 summary에서 "⏳ 미룬 작업:" 패턴을 수집하여
+   * docs/DEFERRED.md에 체크박스 형태로 append한다.
+   * 미룬 작업이 없으면 아무것도 하지 않는다.
+   */
+  private saveDeferredReport(): void {
+    const index = readJson(this.indexFile, PhaseIndexSchema);
+    const deferred: string[] = [];
+
+    for (const s of index.steps) {
+      if (s.status === "completed" && s.summary) {
+        const match = s.summary.match(/⏳\s*미룬 작업:\s*(.+)/);
+        if (match) {
+          deferred.push(`- [ ] Step ${s.step} (${s.name}): ${match[1]}`);
+        }
+      }
+    }
+
+    if (deferred.length === 0) return;
+
+    const deferredFile = join(this.root, "docs", "DEFERRED.md");
+    const date = kstNow().slice(0, 10);
+    const section = `\n## Phase: ${this.phaseDirName} (${date})\n\n${deferred.join("\n")}\n`;
+
+    if (!existsSync(deferredFile)) {
+      writeFileSync(deferredFile, `# 미룬 작업\n${section}`, "utf-8");
+    } else {
+      appendFileSync(deferredFile, section, "utf-8");
+    }
+
+    console.log(`\n⏳ 미룬 작업 ${deferred.length}건 → docs/DEFERRED.md`);
+    for (const line of deferred) {
+      console.log(`  ${line}`);
+    }
+  }
+
   // --- PLAN.md 아카이브 ---
 
   /**
@@ -610,9 +678,9 @@ export class StepExecutor {
    * 다음 /prep 실행 시 기존 PLAN.md가 남아있으면 충돌이 발생하므로,
    * finalize 시점에 자동으로 아카이브한다.
    */
-  private archivePlan(): string | undefined {
+  private archivePlan(): void {
     const planFile = join(this.root, "docs", "PLAN.md");
-    if (!existsSync(planFile)) return undefined;
+    if (!existsSync(planFile)) return;
 
     const archiveDir = join(this.root, "docs", "archive");
     if (!existsSync(archiveDir)) {
@@ -625,6 +693,5 @@ export class StepExecutor {
     const archiveFile = join(archiveDir, archiveName);
     renameSync(planFile, archiveFile);
     console.log(`  ✓ PLAN.md → docs/archive/${archiveName}`);
-    return archiveFile;
   }
 }
