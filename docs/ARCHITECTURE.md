@@ -5,16 +5,21 @@
 harness_framework/
 ├── docker-compose.yml          # PostgreSQL 16
 ├── backend/                    # Spring Boot + JPA
-│   └── src/main/java/com/english/
-│       ├── auth/               # 인증 (회원가입/로그인/JWT)
-│       ├── word/               # 단어 CRUD + Gemini 보강
-│       ├── pattern/            # 패턴 CRUD + 이미지 추출
-│       ├── generate/           # 예문 생성 + GeminiClient
-│       ├── review/             # 복습 (SM-2 + 카드 선정)
-│       ├── study/              # 학습 기록
-│       ├── dashboard/          # 대시보드 통계
-│       ├── setting/            # 사용자 설정
-│       └── config/             # SecurityConfig, GlobalExceptionHandler
+│   └── src/main/
+│       ├── resources/
+│       │   ├── application.yml
+│       │   ├── application-local.yml
+│       │   └── logback-spring.xml  # 프로파일별 로깅 설정 (local/prod/default)
+│       └── java/com/english/
+│           ├── auth/               # 인증 (회원가입/로그인/JWT)
+│           ├── word/               # 단어 CRUD + Gemini 보강
+│           ├── pattern/            # 패턴 CRUD + 이미지 추출
+│           ├── generate/           # 예문 생성 + GeminiClient
+│           ├── review/             # 복습 (SM-2 + 카드 선정)
+│           ├── study/              # 학습 기록
+│           ├── dashboard/          # 대시보드 통계
+│           ├── setting/            # 사용자 설정
+│           └── config/             # SecurityConfig, GlobalExceptionHandler, MdcLoggingFilter
 ├── frontend/                   # Next.js (App Router)
 │   └── app/
 │       ├── page.tsx            # 홈 대시보드
@@ -56,7 +61,9 @@ harness_framework/
   ↓                                                      
 Next.js Client Component                                  
   ↓ fetch(credentials: include)                          
-  → → → →  JwtAuthenticationFilter (Cookie → JWT 검증)    
+  → → → →  MdcLoggingFilter (traceId 세팅 + 요청 시작 로그)
+              ↓                                          
+              JwtAuthenticationFilter (Cookie → JWT 검증)  
               ↓ SecurityContext 설정                      
               ↓ Spring Boot Controller                   
               ↓ Service                                  
@@ -80,13 +87,42 @@ POST /api/auth/signup or /api/auth/login
 
 [인증된 요청]
 GET/POST /api/** (Cookie 자동 전송)
+  → MdcLoggingFilter: traceId 세팅 + 요청 시작 로그
   → JwtAuthenticationFilter: Cookie에서 token 추출 → JWT 검증 → SecurityContext 설정
   → Controller 진입
+  ← MdcLoggingFilter: 응답 완료 로그 (status + 처리시간) + MDC.clear()
 
 [미인증 요청]
 GET/POST /api/** (Cookie 없음)
+  → MdcLoggingFilter: traceId 세팅 + 요청 시작 로그
   → JwtAuthenticationFilter: 토큰 없음 → SecurityContext 미설정
-  → 401 Unauthorized
+  → 401 Unauthorized (SecurityConfig authenticationEntryPoint에서 직접 응답)
+  ← MdcLoggingFilter: 응답 완료 로그 (401 + 처리시간) + MDC.clear()
+```
+
+## 로깅 구조
+```
+logback-spring.xml (프로파일별 통합 관리)
+├── local 프로파일
+│   ├── 컬러 콘솔 출력 (파일 X)
+│   ├── SQL 쿼리 (org.hibernate.SQL=DEBUG)
+│   └── 바인드 파라미터 (org.hibernate.orm.jdbc.bind=TRACE)
+├── prod 프로파일
+│   ├── JSON 콘솔 (LogstashEncoder → ELK/CloudWatch)
+│   ├── logs/app.log (전체 로그, 30일 롤링, 3GB 상한)
+│   ├── logs/error.log (ERROR 이상, 90일 보관)
+│   ├── SQL 쿼리 + 바인드 파라미터 출력
+│   └── 프레임워크 로그 WARN (노이즈 차단)
+└── default 프로파일
+    └── 컬러 콘솔 INFO
+
+요청 추적 흐름:
+  MdcLoggingFilter (@Order HIGHEST_PRECEDENCE)
+    → traceId(UUID 8자리) MDC 세팅
+    → 요청 시작 로그
+    → Security 필터 체인 → JwtAuthenticationFilter → Controller
+    → 응답 완료 로그 (status + 처리시간)
+    → MDC.clear()
 ```
 
 ## 환경 설정
@@ -103,7 +139,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update    # 개발: Entity 기반 자동 스키마 생성
-    show-sql: true
+    # show-sql 제거: logback의 org.hibernate.SQL 로거로 대체
 
 gemini:
   api-key: ${GEMINI_API_KEY}
@@ -174,14 +210,18 @@ UNIQUE 제약 변경:
   ↓
 프론트: 에러 토스트 표시 + 재시도 안내
 
-GlobalExceptionHandler:
+GlobalExceptionHandler (로깅 레벨):
+  4xx — log.warn + 스택트레이스 (클라이언트 오류, 소스 위치 추적용):
   - DuplicateException → 409 DUPLICATE
   - AuthenticationException → 401 UNAUTHORIZED
   - ForbiddenException → 403 FORBIDDEN (IDOR — 다른 사용자 리소스 접근)
   - EmptyRequestException → 400 EMPTY_REQUEST
   - NoWordsException → 400 NO_WORDS
   - NoPatternsException → 400 NO_PATTERNS
+  - NotFoundException → 404 NOT_FOUND
   - InvalidImageException → 400 INVALID_IMAGE_FORMAT
+  - MethodArgumentNotValidException → 400 BAD_REQUEST
+  5xx — log.error + 스택트레이스 (서버 장애, 즉시 확인):
   - GeminiException → 502 AI_SERVICE_ERROR
   - 기타 → 500 INTERNAL_ERROR
 ```

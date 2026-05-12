@@ -34,6 +34,19 @@
 - **단건 등록**: 기존 방식 유지 (변경 없음)
 - **범위**: WordService.bulkCreate만 변경. PatternService(API 호출 없음), GenerateService(이미 배열 구조)는 변경 불필요
 
+## 기능 11: 백엔드 실무 로깅 구성
+- **목표**: 쿼리 로그(SQL + 바인드 파라미터), 요청/응답 로그, 에러 로그를 실무 수준으로 구성. 운영 배포 대비
+- **로컬 환경**: 컬러 콘솔 출력. SQL + 파라미터 + traceId. 파일 저장 안 함
+- **prod 환경**: JSON 콘솔(ELK/CloudWatch 수집) + 파일 롤링(30일) + 에러 전용 파일(90일). SQL + 파라미터 포함
+- **요청 추적**: 모든 요청에 traceId(UUID 8자리) 부여. 요청 시작/완료(method, URI, status, 처리시간) 로깅
+- **에러 로깅**: 4xx → WARN + 스택트레이스(소스 위치 추적), 5xx → ERROR + 스택트레이스
+- **엣지케이스**:
+  - Spring Security 401 (JWT 없음/만료): SecurityConfig authenticationEntryPoint에서 직접 응답 → GlobalExceptionHandler 미경유 → WARN 스택트레이스 없음. 단, MdcLoggingFilter 완료 로그에서 401 status + 처리시간은 확인 가능
+  - Application 코드의 AuthenticationException (로그인 실패 등): GlobalExceptionHandler 경유 → WARN + 스택트레이스 정상 출력
+  - prod SQL 로그: 벌크 등록(300건) 시 SQL+파라미터 로그 대량 발생. 파일 롤링(100MB/파일, 3GB 상한)으로 용량 관리
+- **테스트 영향**: 테스트는 profile 미지정 → logback default 프로파일 (INFO 콘솔, SQL OFF). MdcLoggingFilter가 @Component로 테스트에서도 동작하나 해 없음
+- **제외**: Actuator/Prometheus(별도 작업), 요청 body 로깅(민감정보), AOP(Filter로 충분)
+
 ## MVP 이후 기능
 
 ### 기능 8: 회원가입/로그인 (Phase 1-auth)

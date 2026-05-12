@@ -11,14 +11,14 @@ spring:
     password: app1234
   jpa:
     hibernate:
-      ddl-auto: create
-    show-sql: true
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
 
 gemini:
   api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
 
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-that-is-at-least-32-characters-long}

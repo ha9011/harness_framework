@@ -22,14 +22,15 @@ public class GeminiClient {
     private final ObjectMapper objectMapper;
     private final long[] retryDelaysMs;
 
-    private static final String DEFAULT_API_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+    private static final String BASE_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/";
     private static final int MAX_RETRIES = 3;
 
     @org.springframework.beans.factory.annotation.Autowired
-    public GeminiClient(@Value("${gemini.api-key}") String apiKey) {
+    public GeminiClient(@Value("${gemini.api-key}") String apiKey,
+                        @Value("${gemini.model}") String model) {
         this.apiKey = apiKey;
-        this.apiUrl = DEFAULT_API_URL;
+        this.apiUrl = BASE_URL + model + ":generateContent";
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
         this.retryDelaysMs = new long[]{0, 1000, 3000};
