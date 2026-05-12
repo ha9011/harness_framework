@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "trace-filter-error-logging",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-12T17:16:47+0900",
+      "summary": "MdcLoggingFilter 생성(@Component+@Order HIGHEST_PRECEDENCE, traceId 8자리, 요청 시작/완료 로깅, favicon.ico 제외, MDC.clear), GlobalExceptionHandler에 4xx log.warn 9개 + 5xx log.error 1개 추가(handleGeneral 기존 유지), backend/.gitignore에 logs/ 추가. 전체 테스트 통과",
+      "completed_at": "2026-05-12T17:19:19+0900"
     }
   ],
   "created_at": "2026-05-12T17:15:00+0900"
