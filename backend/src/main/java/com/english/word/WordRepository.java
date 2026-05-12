@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+
 public interface WordRepository extends JpaRepository<Word, Long> {
 
     List<Word> findByUserAndDeletedFalse(User user);
@@ -33,4 +34,7 @@ public interface WordRepository extends JpaRepository<Word, Long> {
             @Param("partOfSpeech") String partOfSpeech,
             @Param("importantOnly") boolean importantOnly,
             Pageable pageable);
+
+    @Query("SELECT w FROM Word w WHERE w.id IN :ids AND w.user = :user AND w.deleted = false")
+    List<Word> findByIdInAndUserAndDeletedFalse(@Param("ids") List<Long> ids, @Param("user") User user);
 }
