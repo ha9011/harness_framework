@@ -13,4 +13,10 @@ public interface GeneratedSentenceRepository extends JpaRepository<GeneratedSent
     List<GeneratedSentence> findByWordId(@Param("wordId") Long wordId);
 
     long countByUser(User user);
+
+    @Query("SELECT DISTINCT gs FROM GeneratedSentence gs LEFT JOIN FETCH gs.situations WHERE gs.id IN :ids")
+    List<GeneratedSentence> findByIdInWithSituations(@Param("ids") List<Long> ids);
+
+    @Query("SELECT sw.wordId, gs FROM GeneratedSentence gs JOIN gs.sentenceWords sw WHERE sw.wordId IN :wordIds")
+    List<Object[]> findByWordIdInWithMapping(@Param("wordIds") List<Long> wordIds);
 }
