@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "service-refactor",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-12T15:09:49+0900",
+      "summary": "ReviewService.getTodayCards()를 배치 조회 방식으로 리팩터링: settingService 선조회 → LIMIT Pageable → 타입별 IN 배치 조회(Map) → Map 기반 카드 빌드. WORD 예문은 RECOGNITION 방향만 수집. 빈 IN 리스트 가드 적용. 쿼리 수 O(N) → O(1) 고정 3~4개",
+      "completed_at": "2026-05-12T15:15:28+0900"
     }
   ],
   "created_at": "2026-05-12T15:07:07+0900"
