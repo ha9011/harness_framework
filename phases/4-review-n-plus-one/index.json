@@ -1,0 +1,20 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "4-review-n-plus-one",
+  "steps": [
+    {
+      "step": 0,
+      "name": "batch-repositories",
+      "status": "completed",
+      "started_at": "2026-05-12T15:07:07+0900",
+      "summary": "4개 Repository에 배치 조회 메서드 추가: ReviewItemRepository(Pageable 오버로드), WordRepository(IN 배치), PatternRepository(IN+JOIN FETCH examples), GeneratedSentenceRepository(situations JOIN FETCH + wordId 매핑 프로젝션)",
+      "completed_at": "2026-05-12T15:09:48+0900"
+    },
+    {
+      "step": 1,
+      "name": "service-refactor",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-05-12T15:07:07+0900"
+}
