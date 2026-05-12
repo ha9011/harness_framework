@@ -9,7 +9,7 @@ import CoffeeTree from "./components/CoffeeTree";
 import AuthGuard from "./components/AuthGuard";
 
 function HomeContent() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -57,11 +57,24 @@ function HomeContent() {
   return (
     <div className="flex flex-col gap-5">
       {/* 인사 헤더 */}
-      <div>
-        <p className="text-xs text-ink-muted">오늘도 한 모금 천천히</p>
-        <h1 className="text-lg font-semibold text-ink tracking-tight mt-1">
-          {user?.nickname}님 안녕하세요
-        </h1>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs text-ink-muted">오늘도 한 모금 천천히</p>
+          <h1 className="text-lg font-semibold text-ink tracking-tight mt-1">
+            {user?.nickname}님 안녕하세요
+          </h1>
+        </div>
+        <button
+          onClick={logout}
+          className="text-ink-muted hover:text-ink transition-colors p-1"
+          aria-label="로그아웃"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
       </div>
 
       {/* 커피나무 */}
