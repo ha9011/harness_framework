@@ -36,6 +36,11 @@
 - **프론트엔드**: 로그인/회원가입 페이지 + 홈에 "닉네임님 안녕하세요" 표시 + 미로그인 시 로그인 페이지로 리다이렉트
 - **데이터 격리**: 전체 Entity에 user_id FK 추가. 사용자별 독립 데이터 (단어, 패턴, 예문, 복습, 학습기록, 설정 모두 분리). 기존 DB 데이터는 삭제 후 새로 시작
 
+### 기능 9: 로그아웃 버튼 + Hydration 수정 (Phase 2-login-convenience)
+- **로그아웃 버튼 (홈 우상단)**: 인사 헤더 영역 우상단에 로그아웃 아이콘 버튼. 누르면 로그아웃 실행 (기존 AuthContext.logout 활용)
+- **로그아웃 버튼 (설정 페이지)**: 설정 카드 아래에 로그아웃 버튼 추가. Ghost 스타일, 텍스트 "로그아웃"
+- **Hydration 에러 수정**: layout.tsx의 `<body>`에 `suppressHydrationWarning` 추가. 브라우저 확장이 주입하는 속성으로 인한 hydration mismatch 경고 제거
+
 ### MVP 제외 사항 (다음 Phase 후보)
 - 닉네임/비밀번호 변경
 - 미니PC 배포 — Docker Compose로 백엔드+프론트+DB 전체 컨테이너화, 셀프호스팅
