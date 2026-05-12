@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "frontend-saved-email",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-12T11:25:27+0900",
+      "summary": "vitest+jsdom 설치, saved-email.ts 헬퍼(get/set/clear + SSR 가드) 구현 및 테스트 3개 통과, 로그인 페이지에 '이메일 저장' 체크박스 추가 (useState 초기화 방식으로 React 19 ESLint 규칙 준수). Critical Gates 전체 통과 (vitest run, build, lint)",
+      "completed_at": "2026-05-12T11:29:03+0900"
     }
   ],
   "created_at": "2026-05-12T11:22:32+0900"
