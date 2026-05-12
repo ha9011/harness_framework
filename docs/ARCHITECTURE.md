@@ -29,7 +29,8 @@ harness_framework/
 │       ├── components/         # 공통 컴포넌트 (AuthGuard 포함)
 │       └── lib/
 │           ├── api.ts          # 백엔드 API 호출 (credentials: include)
-│           └── auth-context.tsx # 인증 상태 Context (AuthProvider, useAuth)
+│           ├── auth-context.tsx # 인증 상태 Context (AuthProvider, useAuth)
+│           └── saved-email.ts  # 이메일 저장 localStorage 헬퍼
 ├── design/                     # 디자인 목업 (JSX + HTML)
 ├── docs/                       # 프로젝트 문서
 ├── phases/                     # harness 실행 메타데이터
@@ -75,7 +76,7 @@ UI 업데이트
 POST /api/auth/signup or /api/auth/login
   → AuthController → AuthService → UserRepository
   → JWT 생성 (JwtProvider)
-  ← Set-Cookie: token=<jwt>; HttpOnly; Path=/api; SameSite=Lax; Max-Age=86400
+  ← Set-Cookie: token=<jwt>; HttpOnly; Path=/api; SameSite=Lax; Max-Age=604800
 
 [인증된 요청]
 GET/POST /api/** (Cookie 자동 전송)
@@ -110,7 +111,7 @@ gemini:
 # JWT (SecurityConfig에서 관리)
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-minimum-32-characters}
-  expiration: 86400000  # 24시간
+  expiration: 604800000  # 7일
 
 # CORS (SecurityConfig에서 관리, CorsConfig.java → 흡수)
 허용 origin: http://localhost:3000
@@ -194,3 +195,4 @@ GlobalExceptionHandler:
 - **클라이언트 상태**: React useState/useReducer
   - 카드 플립 상태, 탭 선택, 폼 입력 등 UI 상태만 클라이언트에서 관리
   - "처음부터 다시" 복습 시 기존 카드 데이터를 클라이언트에서 재사용 (API 재호출 X)
+- **localStorage**: 이메일 저장 (saved-email.ts 헬퍼). 로그인 페이지에서 체크박스로 제어

@@ -145,6 +145,7 @@ warm: bg-primarySoft text-primaryDeep
 - 카피: "같은 자리, 같은 잔으로 다시 시작해요" (serif italic)
 - 이메일 입력 (메일 아이콘)
 - 비밀번호 입력 (자물쇠 아이콘 + 눈 토글)
+- "이메일 저장" 체크박스 — `text-[13px] text-ink-muted`, 체크박스 `w-4 h-4 accent-primary`
 - "로그인" 버튼 (Primary lg)
 - 하단: "계정이 없나요? 회원가입 →" → /signup
 

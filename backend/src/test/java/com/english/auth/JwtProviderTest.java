@@ -10,7 +10,7 @@ class JwtProviderTest {
 
     private JwtProvider jwtProvider;
     private static final String SECRET = "test-secret-key-that-is-at-least-32-characters-long";
-    private static final long EXPIRATION = 86400000L; // 24시간
+    private static final long EXPIRATION = 604800000L; // 7일
 
     @BeforeEach
     void setUp() {

@@ -25,7 +25,7 @@ public class AuthController {
         LoginResult loginResult = authService.login(
                 new LoginRequest(request.getEmail(), request.getPassword()));
 
-        ResponseCookie cookie = createTokenCookie(loginResult.getToken(), 86400);
+        ResponseCookie cookie = createTokenCookie(loginResult.getToken(), 604800);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -36,7 +36,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request) {
         LoginResult result = authService.login(request);
 
-        ResponseCookie cookie = createTokenCookie(result.getToken(), 86400);
+        ResponseCookie cookie = createTokenCookie(result.getToken(), 604800);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
