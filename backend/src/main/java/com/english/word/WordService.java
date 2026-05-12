@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -147,6 +148,35 @@ public class WordService {
 
         word.softDelete();
         reviewItemRepository.softDeleteByUserAndItemTypeAndItemId(user, "WORD", id);
+    }
+
+    // 벌크 보강용 배열 프롬프트 빌더 (package-private: 테스트 접근 가능)
+    String buildBulkEnrichmentPrompt(List<WordCreateRequest> requests) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("다음 영어 단어들에 대해 JSON 형식으로 보강 정보를 제공해주세요.\n\n");
+
+        // 단어 배열을 JSON으로 포함
+        prompt.append("단어 목록:\n");
+        String wordJson = requests.stream()
+                .map(r -> "{\"word\":\"" + r.getWord() + "\", \"meaning\":\"" + r.getMeaning() + "\"}")
+                .collect(java.util.stream.Collectors.joining(", ", "[", "]"));
+        prompt.append(wordJson).append("\n\n");
+
+        prompt.append("아래 JSON 형식으로 응답해주세요:\n");
+        prompt.append("{\n");
+        prompt.append("  \"enrichments\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"word\": \"원본 단어 (위 목록의 word 값 그대로)\",\n");
+        prompt.append("      \"partOfSpeech\": \"품사 (예: 명사, 동사, 형용사)\",\n");
+        prompt.append("      \"pronunciation\": \"IPA 발음 기호\",\n");
+        prompt.append("      \"synonyms\": \"유의어 (쉼표로 구분)\",\n");
+        prompt.append("      \"tip\": \"학습 팁 또는 암기 도움말\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ]\n");
+        prompt.append("}\n\n");
+        prompt.append("⚠️ 입력된 모든 단어에 대해 빠짐없이 응답하세요. enrichments 배열의 각 항목에 word 필드를 반드시 포함하세요.");
+
+        return prompt.toString();
     }
 
     private String buildEnrichmentPrompt(String word, String meaning) {

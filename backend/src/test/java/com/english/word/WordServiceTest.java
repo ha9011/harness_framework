@@ -322,6 +322,56 @@ class WordServiceTest {
     }
 
     @Nested
+    @DisplayName("벌크 보강 프롬프트")
+    class BulkEnrichmentPrompt {
+
+        @Test
+        @DisplayName("프롬프트에 모든 단어가 JSON 배열로 포함된다")
+        void promptContainsAllWordsAsJsonArray() {
+            // given
+            List<WordCreateRequest> requests = List.of(
+                    new WordCreateRequest("apple", "사과"),
+                    new WordCreateRequest("banana", "바나나"),
+                    new WordCreateRequest("cherry", "체리")
+            );
+
+            // when
+            String prompt = wordService.buildBulkEnrichmentPrompt(requests);
+
+            // then
+            assertThat(prompt).contains("\"word\":\"apple\"");
+            assertThat(prompt).contains("\"word\":\"banana\"");
+            assertThat(prompt).contains("\"word\":\"cherry\"");
+            assertThat(prompt).contains("\"meaning\":\"사과\"");
+            assertThat(prompt).contains("\"meaning\":\"바나나\"");
+            assertThat(prompt).contains("\"meaning\":\"체리\"");
+            // JSON 배열 형태 확인
+            assertThat(prompt).contains("[{");
+            assertThat(prompt).contains("}]");
+        }
+
+        @Test
+        @DisplayName("프롬프트에 응답 형식 지시가 포함된다")
+        void promptContainsResponseFormatInstruction() {
+            // given
+            List<WordCreateRequest> requests = List.of(
+                    new WordCreateRequest("apple", "사과")
+            );
+
+            // when
+            String prompt = wordService.buildBulkEnrichmentPrompt(requests);
+
+            // then
+            assertThat(prompt).contains("enrichments");
+            assertThat(prompt).contains("partOfSpeech");
+            assertThat(prompt).contains("pronunciation");
+            assertThat(prompt).contains("synonyms");
+            assertThat(prompt).contains("tip");
+            assertThat(prompt).contains("word");
+        }
+    }
+
+    @Nested
     @DisplayName("등록 시 연동 확인")
     class IntegrationChecks {
 
