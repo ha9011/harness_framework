@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
+import { getSavedEmail, setSavedEmail, clearSavedEmail } from "@/lib/saved-email";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => getSavedEmail() ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(() => getSavedEmail() !== null);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -22,6 +24,11 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
+      if (rememberEmail) {
+        setSavedEmail(email);
+      } else {
+        clearSavedEmail();
+      }
       router.push("/");
     } catch (err) {
       if (err instanceof ApiError) {
@@ -124,6 +131,17 @@ export default function LoginPage() {
           {error && (
             <p className="text-xs text-warn font-medium px-1">{error}</p>
           )}
+
+          {/* 이메일 저장 */}
+          <label className="flex items-center gap-2 px-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={rememberEmail}
+              onChange={(e) => setRememberEmail(e.target.checked)}
+              className="w-4 h-4 accent-primary"
+            />
+            <span className="text-[13px] text-ink-muted">이메일 저장</span>
+          </label>
 
           {/* 로그인 버튼 */}
           <button
