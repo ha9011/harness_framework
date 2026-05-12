@@ -1,0 +1,20 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "6-backend-logging",
+  "steps": [
+    {
+      "step": 0,
+      "name": "logback-config",
+      "status": "completed",
+      "started_at": "2026-05-12T17:15:00+0900",
+      "summary": "logback-spring.xml 생성(local/prod/default 프로파일별 로깅), logstash-logback-encoder 의존성 추가, application.yml show-sql 제거, application-local.yml logging 섹션 제거. 전체 테스트 통과",
+      "completed_at": "2026-05-12T17:16:46+0900"
+    },
+    {
+      "step": 1,
+      "name": "trace-filter-error-logging",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-05-12T17:15:00+0900"
+}
