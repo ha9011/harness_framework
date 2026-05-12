@@ -14,7 +14,7 @@ function SettingsContent() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     api
@@ -92,6 +92,13 @@ function SettingsContent() {
           </p>
         )}
       </div>
+
+      <button
+        onClick={logout}
+        className="w-full rounded-[14px] h-[42px] border border-hairline text-ink-muted text-sm font-semibold hover:text-ink transition-colors"
+      >
+        로그아웃
+      </button>
     </div>
   );
 }
