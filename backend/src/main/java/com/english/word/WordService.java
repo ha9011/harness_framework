@@ -19,13 +19,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WordService {
+
+    static final int BULK_ENRICHMENT_BATCH_SIZE = 25;
 
     private final WordRepository wordRepository;
     private final GeminiClient geminiClient;
@@ -69,44 +73,69 @@ public class WordService {
             throw new EmptyRequestException("등록할 단어가 없습니다");
         }
 
-        int saved = 0;
         int skipped = 0;
         int enrichmentFailed = 0;
-        List<WordResponse> words = new ArrayList<>();
 
-        StudyRecord record = studyRecordService.getOrCreateTodayRecord(user);
-
+        // 1. 중복 검사 — 유효한 단어만 분리
+        List<WordCreateRequest> validRequests = new ArrayList<>();
         for (WordCreateRequest request : requests) {
             if (wordRepository.existsByWordAndUserAndDeletedFalse(request.getWord(), user)) {
                 skipped++;
-                continue;
+            } else {
+                validRequests.add(request);
             }
-
-            Word word = new Word(user, request.getWord(), request.getMeaning());
-
-            // AI 보강 시도
-            boolean enriched = false;
-            try {
-                String prompt = buildEnrichmentPrompt(request.getWord(), request.getMeaning());
-                WordEnrichment enrichment = geminiClient.generateContent(prompt, WordEnrichment.class);
-                word.enrich(enrichment.getPartOfSpeech(), enrichment.getPronunciation(),
-                        enrichment.getSynonyms(), enrichment.getTip());
-                enriched = true;
-            } catch (Exception e) {
-                log.warn("벌크 단어 보강 실패: {} - {}", request.getWord(), e.getMessage());
-                enrichmentFailed++;
-            }
-
-            Word savedWord = wordRepository.save(word);
-
-            studyRecordService.addItem(record, "WORD", savedWord.getId());
-            reviewItemService.createWordReviewItems(user, savedWord.getId());
-
-            words.add(WordResponse.from(savedWord));
-            saved++;
         }
 
-        return new BulkCreateResponse(saved, skipped, enrichmentFailed, words);
+        // 2. 유효한 단어들을 Word 엔티티로 생성 (아직 보강 없이)
+        Map<String, Word> wordMap = new LinkedHashMap<>();
+        for (WordCreateRequest request : validRequests) {
+            wordMap.put(request.getWord(), new Word(user, request.getWord(), request.getMeaning()));
+        }
+
+        // 3. 배치 분할 (BULK_ENRICHMENT_BATCH_SIZE개씩) + Gemini API 호출
+        List<List<WordCreateRequest>> batches = partition(validRequests, BULK_ENRICHMENT_BATCH_SIZE);
+        for (List<WordCreateRequest> batch : batches) {
+            try {
+                String prompt = buildBulkEnrichmentPrompt(batch);
+                BulkWordEnrichment result = geminiClient.generateContent(prompt, BulkWordEnrichment.class);
+
+                // 응답의 word 필드로 매핑
+                int enrichedCount = 0;
+                for (BulkWordEnrichment.Item item : result.getEnrichments()) {
+                    Word word = wordMap.get(item.getWord());
+                    if (word != null) {
+                        word.enrich(item.getPartOfSpeech(), item.getPronunciation(),
+                                item.getSynonyms(), item.getTip());
+                        enrichedCount++;
+                    }
+                }
+                // 매핑 실패한 단어 수 = 배치 크기 - 매핑 성공 수
+                enrichmentFailed += batch.size() - enrichedCount;
+            } catch (Exception e) {
+                log.warn("벌크 보강 배치 실패 ({})건: {}", batch.size(), e.getMessage());
+                enrichmentFailed += batch.size();
+            }
+        }
+
+        // 4. 저장 + 학습기록 + 복습아이템
+        StudyRecord record = studyRecordService.getOrCreateTodayRecord(user);
+        List<WordResponse> words = new ArrayList<>();
+        for (Word word : wordMap.values()) {
+            Word savedWord = wordRepository.save(word);
+            studyRecordService.addItem(record, "WORD", savedWord.getId());
+            reviewItemService.createWordReviewItems(user, savedWord.getId());
+            words.add(WordResponse.from(savedWord));
+        }
+
+        return new BulkCreateResponse(words.size(), skipped, enrichmentFailed, words);
+    }
+
+    private <T> List<List<T>> partition(List<T> list, int size) {
+        List<List<T>> batches = new ArrayList<>();
+        for (int i = 0; i < list.size(); i += size) {
+            batches.add(list.subList(i, Math.min(i + size, list.size())));
+        }
+        return batches;
     }
 
     @Transactional(readOnly = true)

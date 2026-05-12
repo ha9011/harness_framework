@@ -26,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -149,7 +150,7 @@ class WordServiceTest {
     class BulkCreate {
 
         @Test
-        @DisplayName("성공 — saved/skipped/enrichmentFailed 카운트")
+        @DisplayName("성공 — saved/skipped/enrichmentFailed 카운트 (⚠️ 테스트 변경: ADR-010 배치 전환)")
         void bulkCreateSuccess() {
             // given
             List<WordCreateRequest> requests = List.of(
@@ -163,12 +164,11 @@ class WordServiceTest {
             given(wordRepository.existsByWordAndUserAndDeletedFalse("banana", testUser)).willReturn(false);
             given(wordRepository.existsByWordAndUserAndDeletedFalse("cherry", testUser)).willReturn(false);
 
-            // banana 보강 성공
-            WordEnrichment enrichment = new WordEnrichment("명사", "bəˈnænə", "plantain", "노란 과일");
-            given(geminiClient.generateContent(contains("banana"), eq(WordEnrichment.class))).willReturn(enrichment);
-            // cherry 보강 실패
-            given(geminiClient.generateContent(contains("cherry"), eq(WordEnrichment.class)))
-                    .willThrow(new GeminiException("API 오류"));
+            // 배치 보강: banana 성공, cherry는 응답에 미포함 (매핑 실패 → enrichmentFailed)
+            BulkWordEnrichment bulkResult = new BulkWordEnrichment(List.of(
+                    new BulkWordEnrichment.Item("banana", "명사", "bəˈnænə", "plantain", "노란 과일")
+            ));
+            given(geminiClient.generateContent(anyString(), eq(BulkWordEnrichment.class))).willReturn(bulkResult);
 
             Word banana = new Word(testUser, "banana", "바나나");
             banana.enrich("명사", "bəˈnænə", "plantain", "노란 과일");
@@ -192,6 +192,9 @@ class WordServiceTest {
             assertThat(response.getSkipped()).isEqualTo(1);
             assertThat(response.getEnrichmentFailed()).isEqualTo(1);
             assertThat(response.getWords()).hasSize(2);
+
+            // 배치 호출 1회 검증 (2개 유효 단어 → 1배치)
+            verify(geminiClient, times(1)).generateContent(anyString(), eq(BulkWordEnrichment.class));
         }
 
         @Test
@@ -199,6 +202,118 @@ class WordServiceTest {
         void bulkCreateEmpty() {
             assertThatThrownBy(() -> wordService.bulkCreate(testUser, List.of()))
                     .isInstanceOf(EmptyRequestException.class);
+        }
+
+        @Test
+        @DisplayName("배치 분할 — 55개 → 3배치 (25+25+5)")
+        void bulkCreateBatchPartition() {
+            // given: 55개 유효 단어 생성
+            List<WordCreateRequest> requests = new ArrayList<>();
+            for (int i = 0; i < 55; i++) {
+                requests.add(new WordCreateRequest("word" + i, "뜻" + i));
+            }
+
+            given(wordRepository.existsByWordAndUserAndDeletedFalse(anyString(), eq(testUser))).willReturn(false);
+
+            // 모든 배치 보강 성공 (빈 enrichments 반환 — 매핑은 실패하지만 호출 횟수 검증이 목적)
+            given(geminiClient.generateContent(anyString(), eq(BulkWordEnrichment.class)))
+                    .willReturn(new BulkWordEnrichment(List.of()));
+
+            given(wordRepository.save(any(Word.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
+
+            // when
+            BulkCreateResponse response = wordService.bulkCreate(testUser, requests);
+
+            // then: 55개 → 3배치 (25+25+5)
+            verify(geminiClient, times(3)).generateContent(anyString(), eq(BulkWordEnrichment.class));
+            assertThat(response.getSaved()).isEqualTo(55);
+        }
+
+        @Test
+        @DisplayName("배치 실패 — 해당 배치만 미보강 저장")
+        void bulkCreateBatchFailure() {
+            // given: 30개 단어 → 2배치 (25+5)
+            List<WordCreateRequest> requests = new ArrayList<>();
+            for (int i = 0; i < 30; i++) {
+                requests.add(new WordCreateRequest("word" + i, "뜻" + i));
+            }
+
+            given(wordRepository.existsByWordAndUserAndDeletedFalse(anyString(), eq(testUser))).willReturn(false);
+
+            // 첫 번째 배치(25개) 성공: 모든 단어에 대해 보강 응답 반환
+            List<BulkWordEnrichment.Item> firstBatchItems = new ArrayList<>();
+            for (int i = 0; i < 25; i++) {
+                firstBatchItems.add(new BulkWordEnrichment.Item("word" + i, "명사", "/wɜːrd/", "syn", "tip"));
+            }
+            BulkWordEnrichment firstBatchResult = new BulkWordEnrichment(firstBatchItems);
+
+            // 두 번째 배치(5개) 실패
+            given(geminiClient.generateContent(anyString(), eq(BulkWordEnrichment.class)))
+                    .willReturn(firstBatchResult)
+                    .willThrow(new GeminiException("API 오류"));
+
+            given(wordRepository.save(any(Word.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
+
+            // when
+            BulkCreateResponse response = wordService.bulkCreate(testUser, requests);
+
+            // then
+            assertThat(response.getSaved()).isEqualTo(30);           // 전부 저장됨
+            assertThat(response.getEnrichmentFailed()).isEqualTo(5); // 두 번째 배치 5개만 미보강
+            // 첫 번째 배치 단어는 보강됨
+            WordResponse firstWord = response.getWords().get(0);
+            assertThat(firstWord.getPartOfSpeech()).isEqualTo("명사");
+            // 두 번째 배치 단어는 미보강
+            WordResponse lastWord = response.getWords().get(29);
+            assertThat(lastWord.getPartOfSpeech()).isNull();
+        }
+
+        @Test
+        @DisplayName("Gemini 응답에서 단어명으로 매핑")
+        void bulkCreateWordMapping() {
+            // given: 순서가 다른 응답으로 매핑 정확성 검증
+            List<WordCreateRequest> requests = List.of(
+                    new WordCreateRequest("apple", "사과"),
+                    new WordCreateRequest("banana", "바나나")
+            );
+
+            given(wordRepository.existsByWordAndUserAndDeletedFalse(anyString(), eq(testUser))).willReturn(false);
+
+            // Gemini 응답: 입력과 역순으로 반환
+            BulkWordEnrichment bulkResult = new BulkWordEnrichment(List.of(
+                    new BulkWordEnrichment.Item("banana", "명사", "bəˈnænə", "plantain", "노란 과일"),
+                    new BulkWordEnrichment.Item("apple", "명사", "ˈæpəl", "fruit", "사과 팁")
+            ));
+            given(geminiClient.generateContent(anyString(), eq(BulkWordEnrichment.class))).willReturn(bulkResult);
+
+            given(wordRepository.save(any(Word.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            StudyRecord record = new StudyRecord(testUser, 1, LocalDate.now());
+            given(studyRecordService.getOrCreateTodayRecord(testUser)).willReturn(record);
+
+            // when
+            BulkCreateResponse response = wordService.bulkCreate(testUser, requests);
+
+            // then: 각 단어에 올바른 보강 정보가 매핑됨
+            assertThat(response.getEnrichmentFailed()).isEqualTo(0);
+            WordResponse appleResponse = response.getWords().stream()
+                    .filter(w -> "apple".equals(w.getWord())).findFirst().orElseThrow();
+            WordResponse bananaResponse = response.getWords().stream()
+                    .filter(w -> "banana".equals(w.getWord())).findFirst().orElseThrow();
+
+            assertThat(appleResponse.getPronunciation()).isEqualTo("ˈæpəl");
+            assertThat(appleResponse.getSynonyms()).isEqualTo("fruit");
+            assertThat(bananaResponse.getPronunciation()).isEqualTo("bəˈnænə");
+            assertThat(bananaResponse.getSynonyms()).isEqualTo("plantain");
         }
     }
 
