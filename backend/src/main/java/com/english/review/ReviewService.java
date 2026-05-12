@@ -11,13 +11,12 @@ import com.english.setting.SettingService;
 import com.english.word.Word;
 import com.english.word.WordRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,26 +35,50 @@ public class ReviewService {
      */
     @Transactional
     public List<ReviewCardResponse> getTodayCards(User user, String type, List<Long> exclude) {
+        // dailyReviewCount 먼저 조회
+        int dailyReviewCount = settingService.getSetting(user).getDailyReviewCount();
+        if (dailyReviewCount <= 0) {
+            return Collections.emptyList();
+        }
+
         List<Long> excludeIds = (exclude == null || exclude.isEmpty())
                 ? Collections.singletonList(-1L) : exclude;
 
-        List<ReviewItem> items = reviewItemRepository.findTodayCards(user, type, LocalDate.now(), excludeIds);
+        // LIMIT 적용하여 필요한 만큼만 조회
+        List<ReviewItem> items = reviewItemRepository.findTodayCards(
+                user, type, LocalDate.now(), excludeIds, PageRequest.of(0, dailyReviewCount));
 
-        // 카드 응답 빌드 (원본 삭제된 항목은 null → 제외)
-        List<ReviewCardResponse> cards = items.stream()
-                .map(this::buildCardResponse)
-                .filter(card -> card != null)
+        if (items.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // itemId 수집
+        List<Long> itemIds = items.stream()
+                .map(ReviewItem::getItemId)
                 .collect(Collectors.toList());
 
-        // LIMIT N (설정에서 dailyReviewCount 조회)
-        int dailyReviewCount = settingService.getSetting(user).getDailyReviewCount();
-        int limit = Math.min(cards.size(), dailyReviewCount);
-        List<ReviewCardResponse> selected = new ArrayList<>(cards.subList(0, limit));
+        // 타입별 배치 조회 + 카드 빌드
+        List<ReviewCardResponse> cards;
+        switch (type) {
+            case "WORD":
+                cards = buildWordCards(items, itemIds, user);
+                break;
+            case "PATTERN":
+                cards = buildPatternCards(items, itemIds, user);
+                break;
+            case "SENTENCE":
+                cards = buildSentenceCards(items, itemIds);
+                break;
+            default:
+                cards = Collections.emptyList();
+                break;
+        }
 
         // 랜덤 셔플
-        Collections.shuffle(selected);
+        List<ReviewCardResponse> result = new ArrayList<>(cards);
+        Collections.shuffle(result);
 
-        return selected;
+        return result;
     }
 
     /**
@@ -84,30 +107,48 @@ public class ReviewService {
         );
     }
 
-    private ReviewCardResponse buildCardResponse(ReviewItem item) {
-        switch (item.getItemType()) {
-            case "WORD":
-                return buildWordCard(item);
-            case "PATTERN":
-                return buildPatternCard(item);
-            case "SENTENCE":
-                return buildSentenceCard(item);
-            default:
-                return null;
+    private List<ReviewCardResponse> buildWordCards(List<ReviewItem> items, List<Long> itemIds, User user) {
+        // 단어 배치 조회
+        Map<Long, Word> wordMap = wordRepository.findByIdInAndUserAndDeletedFalse(itemIds, user)
+                .stream()
+                .collect(Collectors.toMap(Word::getId, w -> w));
+
+        // RECOGNITION 방향만 예문 배치 조회
+        List<Long> recognitionWordIds = items.stream()
+                .filter(i -> "RECOGNITION".equals(i.getDirection()))
+                .map(ReviewItem::getItemId)
+                .filter(wordMap::containsKey)
+                .collect(Collectors.toList());
+
+        Map<Long, List<GeneratedSentence>> wordExamplesMap = Collections.emptyMap();
+        if (!recognitionWordIds.isEmpty()) {
+            wordExamplesMap = generatedSentenceRepository.findByWordIdInWithMapping(recognitionWordIds)
+                    .stream()
+                    .collect(Collectors.groupingBy(
+                            row -> (Long) row[0],
+                            Collectors.mapping(row -> (GeneratedSentence) row[1], Collectors.toList())
+                    ));
         }
+
+        Map<Long, List<GeneratedSentence>> finalWordExamplesMap = wordExamplesMap;
+        return items.stream()
+                .map(item -> {
+                    Word word = wordMap.get(item.getItemId());
+                    if (word == null) return null;
+                    return buildWordCard(item, word, finalWordExamplesMap);
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
-    private ReviewCardResponse buildWordCard(ReviewItem item) {
-        Word word = wordRepository.findByIdAndUserAndDeletedFalse(item.getItemId(), item.getUser()).orElse(null);
-        if (word == null) return null;
-
+    private ReviewCardResponse buildWordCard(ReviewItem item, Word word, Map<Long, List<GeneratedSentence>> wordExamplesMap) {
         ReviewCardResponse.FrontContent front;
         ReviewCardResponse.BackContent back;
 
         if ("RECOGNITION".equals(item.getDirection())) {
             front = new ReviewCardResponse.FrontContent(word.getWord(), null, null, null, null, null);
 
-            List<ReviewCardResponse.ExampleDto> examples = getWordExamples(item.getItemId());
+            List<ReviewCardResponse.ExampleDto> examples = getWordExamplesFromMap(item.getItemId(), wordExamplesMap);
             back = new ReviewCardResponse.BackContent(null, word.getMeaning(), word.getPartOfSpeech(),
                     null, null, null, examples);
         } else {
@@ -119,10 +160,41 @@ public class ReviewService {
         return new ReviewCardResponse(item.getId(), item.getItemType(), item.getDirection(), front, back);
     }
 
-    private ReviewCardResponse buildPatternCard(ReviewItem item) {
-        Pattern pattern = patternRepository.findByIdAndUserAndDeletedFalse(item.getItemId(), item.getUser()).orElse(null);
-        if (pattern == null) return null;
+    private List<ReviewCardResponse.ExampleDto> getWordExamplesFromMap(Long wordId, Map<Long, List<GeneratedSentence>> wordExamplesMap) {
+        List<GeneratedSentence> sentences = wordExamplesMap.getOrDefault(wordId, Collections.emptyList());
+        if (sentences.isEmpty()) return Collections.emptyList();
 
+        if (sentences.size() <= 3) {
+            return sentences.stream()
+                    .map(s -> new ReviewCardResponse.ExampleDto(s.getEnglishSentence(), s.getKoreanTranslation()))
+                    .collect(Collectors.toList());
+        }
+
+        // 4개 이상이면 랜덤 3개 선택
+        List<GeneratedSentence> shuffled = new ArrayList<>(sentences);
+        Collections.shuffle(shuffled);
+        return shuffled.subList(0, 3).stream()
+                .map(s -> new ReviewCardResponse.ExampleDto(s.getEnglishSentence(), s.getKoreanTranslation()))
+                .collect(Collectors.toList());
+    }
+
+    private List<ReviewCardResponse> buildPatternCards(List<ReviewItem> items, List<Long> itemIds, User user) {
+        // 패턴 배치 조회 (examples JOIN FETCH 포함)
+        Map<Long, Pattern> patternMap = patternRepository.findByIdInWithExamples(itemIds, user)
+                .stream()
+                .collect(Collectors.toMap(Pattern::getId, p -> p));
+
+        return items.stream()
+                .map(item -> {
+                    Pattern pattern = patternMap.get(item.getItemId());
+                    if (pattern == null) return null;
+                    return buildPatternCard(item, pattern);
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private ReviewCardResponse buildPatternCard(ReviewItem item, Pattern pattern) {
         ReviewCardResponse.FrontContent front;
         ReviewCardResponse.BackContent back;
 
@@ -143,10 +215,23 @@ public class ReviewService {
         return new ReviewCardResponse(item.getId(), item.getItemType(), item.getDirection(), front, back);
     }
 
-    private ReviewCardResponse buildSentenceCard(ReviewItem item) {
-        GeneratedSentence sentence = generatedSentenceRepository.findById(item.getItemId()).orElse(null);
-        if (sentence == null) return null;
+    private List<ReviewCardResponse> buildSentenceCards(List<ReviewItem> items, List<Long> itemIds) {
+        // 문장 배치 조회 (situations JOIN FETCH 포함)
+        Map<Long, GeneratedSentence> sentenceMap = generatedSentenceRepository.findByIdInWithSituations(itemIds)
+                .stream()
+                .collect(Collectors.toMap(GeneratedSentence::getId, gs -> gs));
 
+        return items.stream()
+                .map(item -> {
+                    GeneratedSentence sentence = sentenceMap.get(item.getItemId());
+                    if (sentence == null) return null;
+                    return buildSentenceCard(item, sentence);
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private ReviewCardResponse buildSentenceCard(ReviewItem item, GeneratedSentence sentence) {
         // 상황 5개 중 랜덤 1개 선택
         String situation = null;
         if (sentence.getSituations() != null && !sentence.getSituations().isEmpty()) {
@@ -160,23 +245,5 @@ public class ReviewService {
                 null, null, null, null, null, sentence.getKoreanTranslation(), null);
 
         return new ReviewCardResponse(item.getId(), item.getItemType(), item.getDirection(), front, back);
-    }
-
-    private List<ReviewCardResponse.ExampleDto> getWordExamples(Long wordId) {
-        List<GeneratedSentence> sentences = generatedSentenceRepository.findByWordId(wordId);
-        if (sentences.isEmpty()) return Collections.emptyList();
-
-        if (sentences.size() <= 3) {
-            return sentences.stream()
-                    .map(s -> new ReviewCardResponse.ExampleDto(s.getEnglishSentence(), s.getKoreanTranslation()))
-                    .collect(Collectors.toList());
-        }
-
-        // 4개 이상이면 랜덤 3개 선택
-        List<GeneratedSentence> shuffled = new ArrayList<>(sentences);
-        Collections.shuffle(shuffled);
-        return shuffled.subList(0, 3).stream()
-                .map(s -> new ReviewCardResponse.ExampleDto(s.getEnglishSentence(), s.getKoreanTranslation()))
-                .collect(Collectors.toList());
     }
 }
