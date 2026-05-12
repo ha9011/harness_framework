@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -84,12 +85,13 @@ class ReviewServiceTest {
         void wordTypeOnly() {
             // given
             ReviewItem wordItem = createReviewItem(1L, "WORD", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList(), any(Pageable.class)))
                     .willReturn(List.of(wordItem));
 
             Word word = new Word(testUser, "hello", "안녕");
-            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
-            given(generatedSentenceRepository.findByWordId(1L)).willReturn(Collections.emptyList());
+            setId(word, 1L);
+            given(wordRepository.findByIdInAndUserAndDeletedFalse(anyList(), eq(testUser))).willReturn(List.of(word));
+            given(generatedSentenceRepository.findByWordIdInWithMapping(anyList())).willReturn(Collections.emptyList());
 
             // when
             List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "WORD", Collections.emptyList());
@@ -104,12 +106,12 @@ class ReviewServiceTest {
         void patternTypeOnly() {
             // given
             ReviewItem patternItem = createReviewItem(2L, "PATTERN", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq(testUser), eq("PATTERN"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("PATTERN"), any(LocalDate.class), anyList(), any(Pageable.class)))
                     .willReturn(List.of(patternItem));
 
             Pattern pattern = new Pattern(testUser, "I want to ~", "~하고 싶다");
             setId(pattern, 1L);
-            given(patternRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(pattern));
+            given(patternRepository.findByIdInWithExamples(anyList(), eq(testUser))).willReturn(List.of(pattern));
 
             // when
             List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "PATTERN", Collections.emptyList());
@@ -124,13 +126,13 @@ class ReviewServiceTest {
         void sentenceTypeOnly() {
             // given
             ReviewItem sentenceItem = createReviewItem(3L, "SENTENCE", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq(testUser), eq("SENTENCE"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("SENTENCE"), any(LocalDate.class), anyList(), any(Pageable.class)))
                     .willReturn(List.of(sentenceItem));
 
             GeneratedSentence sentence = new GeneratedSentence(testUser, "Hello world", "안녕 세상", "ELEMENTARY");
             sentence.addSituation("카페에서 친구에게 인사할 때");
             setId(sentence, 1L);
-            given(generatedSentenceRepository.findById(1L)).willReturn(Optional.of(sentence));
+            given(generatedSentenceRepository.findByIdInWithSituations(anyList())).willReturn(List.of(sentence));
 
             // when
             List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "SENTENCE", Collections.emptyList());
@@ -144,7 +146,7 @@ class ReviewServiceTest {
         @DisplayName("복습 대상 0개 → 빈 배열 반환")
         void emptyResult() {
             // given
-            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList(), any(Pageable.class)))
                     .willReturn(Collections.emptyList());
 
             // when
@@ -159,7 +161,7 @@ class ReviewServiceTest {
         void excludeCards() {
             // given
             List<Long> exclude = List.of(1L, 2L);
-            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), eq(exclude)))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), eq(exclude), any(Pageable.class)))
                     .willReturn(Collections.emptyList());
 
             // when
@@ -167,7 +169,7 @@ class ReviewServiceTest {
 
             // then
             assertThat(result).isEmpty();
-            verify(reviewItemRepository).findTodayCards(testUser, "WORD", LocalDate.now(), exclude);
+            verify(reviewItemRepository).findTodayCards(eq(testUser), eq("WORD"), eq(LocalDate.now()), eq(exclude), any(Pageable.class));
         }
 
         @Test
@@ -175,7 +177,7 @@ class ReviewServiceTest {
         void sentenceCardHasSituation() {
             // given
             ReviewItem sentenceItem = createReviewItem(3L, "SENTENCE", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq(testUser), eq("SENTENCE"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("SENTENCE"), any(LocalDate.class), anyList(), any(Pageable.class)))
                     .willReturn(List.of(sentenceItem));
 
             GeneratedSentence sentence = new GeneratedSentence(testUser, "I want coffee", "커피 주세요", "ELEMENTARY");
@@ -183,7 +185,7 @@ class ReviewServiceTest {
             sentence.addSituation("아침에 눈 뜨자마자");
             sentence.addSituation("회의 중 졸릴 때");
             setId(sentence, 1L);
-            given(generatedSentenceRepository.findById(1L)).willReturn(Optional.of(sentence));
+            given(generatedSentenceRepository.findByIdInWithSituations(anyList())).willReturn(List.of(sentence));
 
             // when
             List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "SENTENCE", Collections.emptyList());
@@ -199,18 +201,20 @@ class ReviewServiceTest {
         void wordRecognitionBackExamples() {
             // given
             ReviewItem wordItem = createReviewItem(1L, "WORD", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList(), any(Pageable.class)))
                     .willReturn(List.of(wordItem));
 
             Word word = new Word(testUser, "hello", "안녕");
-            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
+            setId(word, 1L);
+            given(wordRepository.findByIdInAndUserAndDeletedFalse(anyList(), eq(testUser))).willReturn(List.of(word));
 
             // 4개 예문 생성 → 최대 3개 반환
             GeneratedSentence s1 = new GeneratedSentence(testUser, "Hello there", "안녕 거기", "ELEMENTARY");
             GeneratedSentence s2 = new GeneratedSentence(testUser, "Hello world", "안녕 세상", "ELEMENTARY");
             GeneratedSentence s3 = new GeneratedSentence(testUser, "Hello friend", "안녕 친구", "ELEMENTARY");
             GeneratedSentence s4 = new GeneratedSentence(testUser, "Hello again", "또 안녕", "ELEMENTARY");
-            given(generatedSentenceRepository.findByWordId(1L)).willReturn(List.of(s1, s2, s3, s4));
+            given(generatedSentenceRepository.findByWordIdInWithMapping(anyList())).willReturn(List.of(
+                    new Object[]{1L, s1}, new Object[]{1L, s2}, new Object[]{1L, s3}, new Object[]{1L, s4}));
 
             // when
             List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "WORD", Collections.emptyList());
@@ -224,15 +228,17 @@ class ReviewServiceTest {
         void wordRecognitionBackExamplesLessThan3() {
             // given
             ReviewItem wordItem = createReviewItem(1L, "WORD", 1L, "RECOGNITION");
-            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList()))
+            given(reviewItemRepository.findTodayCards(eq(testUser), eq("WORD"), any(LocalDate.class), anyList(), any(Pageable.class)))
                     .willReturn(List.of(wordItem));
 
             Word word = new Word(testUser, "hello", "안녕");
-            given(wordRepository.findByIdAndUserAndDeletedFalse(1L, testUser)).willReturn(Optional.of(word));
+            setId(word, 1L);
+            given(wordRepository.findByIdInAndUserAndDeletedFalse(anyList(), eq(testUser))).willReturn(List.of(word));
 
             GeneratedSentence s1 = new GeneratedSentence(testUser, "Hello there", "안녕 거기", "ELEMENTARY");
             GeneratedSentence s2 = new GeneratedSentence(testUser, "Hello world", "안녕 세상", "ELEMENTARY");
-            given(generatedSentenceRepository.findByWordId(1L)).willReturn(List.of(s1, s2));
+            given(generatedSentenceRepository.findByWordIdInWithMapping(anyList())).willReturn(List.of(
+                    new Object[]{1L, s1}, new Object[]{1L, s2}));
 
             // when
             List<ReviewCardResponse> result = reviewService.getTodayCards(testUser, "WORD", Collections.emptyList());
