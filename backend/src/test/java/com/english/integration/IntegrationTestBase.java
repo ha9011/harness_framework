@@ -42,7 +42,7 @@ public abstract class IntegrationTestBase {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("jwt.secret", () -> "test-secret-key-that-is-at-least-32-characters-long");
-        registry.add("jwt.expiration", () -> "86400000");
+        registry.add("jwt.expiration", () -> "604800000");
     }
 
     // 회원가입 후 인증 Cookie가 포함된 HttpHeaders 반환

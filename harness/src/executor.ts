@@ -23,7 +23,7 @@ import { loadGuardrails, buildStepContext, buildPreamble } from "./guardrails.js
 import { PhaseIndexSchema, MutablePhaseIndexSchema, TopIndexSchema } from "./schemas.js";
 import { StepFSM } from "./fsm.js";
 import { lintStepContract } from "./step-lint.js";
-import type { PhaseIndex, MutablePhaseIndex, Step, ErrorStep, BlockedStep, TopIndex } from "./types.js";
+import type { PhaseIndex, MutablePhaseIndex, Step, ErrorStep, BlockedStep, TopIndex, StepStatus } from "./types.js";
 
 type Blocker =
   | { type: "error"; step: ErrorStep }
@@ -58,6 +58,7 @@ export class StepExecutor {
   private project: string;
   private phaseName: string;
   private total: number;
+  private readonly stepNames: string[]; // JSON 손상 시 원본 이름 복원용
 
   constructor(opts: ExecutorOpts, deps?: Partial<ExecutorDeps>) {
     this.root = opts.rootDir ?? resolve(join(import.meta.dirname, "..", ".."));
@@ -89,6 +90,7 @@ export class StepExecutor {
     this.project = index.project;
     this.phaseName = index.phase;
     this.total = index.steps.length;
+    this.stepNames = index.steps.map((s) => s.name);
   }
 
   async run(): Promise<void> {
@@ -324,13 +326,14 @@ export class StepExecutor {
       writeJson(this.indexFile, data);
     } catch {
       // JSON 자체가 깨진 경우 — 생성자에서 읽은 원본 정보로 최소 구조 재생성
+      // stepNum 이전 step은 completed, 해당 step은 pending, 이후는 pending
       const index = {
         project: this.project,
         phase: this.phaseName,
         steps: Array.from({ length: this.total }, (_, i) => ({
           step: i,
-          name: `step-${i}`,
-          status: i === stepNum ? "pending" as const : "pending" as const,
+          name: this.stepNames[i] ?? `step-${i}`,
+          status: i < stepNum ? "completed" as const : "pending" as const,
         })),
       };
       writeJson(this.indexFile, index);
@@ -511,13 +514,16 @@ export class StepExecutor {
         prevError = errMsg;
         console.log(`  ↻ Step ${stepNum}: retry ${attempt}/${MAX_RETRIES} — ${errMsg}`);
       } else {
-        // 최종 실패 기록
+        // 최종 실패 기록 — FSM으로 전이 검증
         try {
           const mutable = this.readMutable();
           const mStep = mutable.steps.find((s) => s.step === stepNum);
           if (mStep) {
+            const errorMsg = `[${MAX_RETRIES}회 시도 후 실패] ${errMsg}`;
+            const fsm = new StepFSM(mStep.status as StepStatus);
+            fsm.transition("fail", { error_message: errorMsg });
             mStep.status = "error";
-            mStep.error_message = `[${MAX_RETRIES}회 시도 후 실패] ${errMsg}`;
+            mStep.error_message = errorMsg;
             mStep.failed_at = ts;
           }
           writeJson(this.indexFile, mutable);
