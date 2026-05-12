@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "batch-bulk-create",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-12T16:15:09+0900",
+      "summary": "bulkCreate를 25개 단위 배치 호출로 리팩터링, 기존 bulkCreateSuccess 테스트 배치 방식으로 수정(⚠️ 테스트 변경: ADR-010 배치 전환), 신규 테스트 3건(배치 분할/배치 실패/단어명 매핑) 추가, 전체 테스트 통과",
+      "completed_at": "2026-05-12T16:18:26+0900"
     }
   ],
   "created_at": "2026-05-12T16:12:18+0900"
