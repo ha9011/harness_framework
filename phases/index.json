@@ -22,6 +22,11 @@
     },
     {
       "dir": "4-review-n-plus-one",
+      "status": "completed",
+      "completed_at": "2026-05-12T15:15:28+0900"
+    },
+    {
+      "dir": "5-bulk-enrichment-batch",
       "status": "pending"
     }
   ]
