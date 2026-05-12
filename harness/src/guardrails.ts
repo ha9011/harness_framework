@@ -102,6 +102,7 @@ export function buildPreamble(opts: PreambleOpts): string {
     `   - AC 통과 → "completed" + "summary" 필드에 이 step의 산출물을 한 줄로 요약\n` +
     `   - ${maxRetries}회 수정 시도 후에도 실패 → "error" + "error_message" 기록\n` +
     `   - 사용자 개입이 필요한 경우 (API 키, 인증, 수동 설정 등) → "blocked" + "blocked_reason" 기록 후 즉시 중단\n` +
-    `9. 모든 변경사항을 저장하라. Git 커밋은 하지 마라. 하네스가 자동으로 처리한다.\n\n---\n\n`
+    `9. 모든 변경사항을 저장하라. Git 커밋은 하지 마라. 하네스가 자동으로 처리한다.\n` +
+    `10. 이 step의 금지사항이나 Out of Scope에 의해 다른 step으로 미루는 작업이 발생하면, summary에 "⏳ 미룬 작업: {내용}"을 기록하라. 해당 작업을 수행할 step이 PLAN.md에 존재하는지 확인하고, 존재하지 않으면 summary에 "⚠️ 연결 스텝 누락: {내용}"을 추가하라.\n\n---\n\n`
   );
 }

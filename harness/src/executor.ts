@@ -544,10 +544,40 @@ export class StepExecutor {
       await this.git.push(`feat-${this.phaseName}`);
     }
 
+    this.printDeferredReport();
+
     console.log(`\n${"=".repeat(60)}`);
     console.log(`  Phase '${this.phaseName}' completed!`);
     console.log(`  다음 작업은 /prep부터 시작하세요.`);
     console.log(`${"=".repeat(60)}`);
+  }
+
+  // --- 미룬 작업 리포트 ---
+
+  /**
+   * 완료된 step들의 summary에서 "⏳ 미룬 작업" 또는 "⚠️ 연결 스텝 누락"을
+   * 스캔하여 리포트를 출력한다.
+   */
+  private printDeferredReport(): void {
+    const index = readJson(this.indexFile, PhaseIndexSchema);
+    const deferred: string[] = [];
+
+    for (const step of index.steps) {
+      if (step.status === "completed" && step.summary) {
+        if (step.summary.includes("⏳") || step.summary.includes("⚠️")) {
+          deferred.push(`  - Step ${step.step} (${step.name}): ${step.summary}`);
+        }
+      }
+    }
+
+    if (deferred.length === 0) return;
+
+    console.log(`\n${"=".repeat(60)}`);
+    console.log(`  ⏳ 미완료 작업 리포트`);
+    console.log(`${"=".repeat(60)}`);
+    for (const line of deferred) {
+      console.log(line);
+    }
   }
 
   // --- PLAN.md 아카이브 ---

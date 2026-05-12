@@ -3,6 +3,10 @@ package com.english.word;
 import com.english.auth.AuthException;
 import com.english.auth.User;
 import com.english.auth.UserRepository;
+import com.english.generate.GeminiClient;
+import com.english.generate.GeminiClientException;
+import com.english.generate.GeminiWordEnrichment;
+import com.english.generate.GeminiWordInput;
 import com.english.review.ReviewItemCreationService;
 import com.english.review.ReviewItemType;
 import com.english.study.StudyItemType;
@@ -29,18 +33,20 @@ public class WordService {
 	private final UserRepository userRepository;
 	private final StudyRecordService studyRecordService;
 	private final ReviewItemCreationService reviewItemCreationService;
+	private final GeminiClient geminiClient;
 
 	public WordService(
-			WordRepository wordRepository,
-			UserRepository userRepository,
-			StudyRecordService studyRecordService,
-			ReviewItemCreationService reviewItemCreationService
-	) {
+            WordRepository wordRepository,
+            UserRepository userRepository,
+            StudyRecordService studyRecordService,
+            ReviewItemCreationService reviewItemCreationService, GeminiClient geminiClient
+    ) {
 		this.wordRepository = wordRepository;
 		this.userRepository = userRepository;
 		this.studyRecordService = studyRecordService;
 		this.reviewItemCreationService = reviewItemCreationService;
-	}
+        this.geminiClient = geminiClient;
+    }
 
 	@Transactional
 	public WordResponse create(Long userId, WordCreateRequest request) {
@@ -60,6 +66,26 @@ public class WordService {
 		LocalDate today = LocalDate.now();
 		studyRecordService.recordLearning(user, StudyItemType.WORD, saved.getId(), today);
 		reviewItemCreationService.createWordReviewItems(user, saved.getId(), today);
+
+		// --- 여기부터 추가 ---
+		try {
+			var input = new GeminiWordInput(saved.getId(), saved.getWord(), saved.getMeaning());
+			List<GeminiWordEnrichment> enrichments = geminiClient.enrichWords(List.of(input));
+			if (!enrichments.isEmpty()) {
+				GeminiWordEnrichment e = enrichments.get(0);
+				saved.update(
+						saved.getWord(),
+						saved.getMeaning(),
+						e.partOfSpeech(),
+						e.pronunciation(),
+						e.synonyms(),
+						e.tip());
+			}
+		} catch (GeminiClientException ignored) {
+			// 보강 실패해도 단어 저장은 유지
+		}
+		// --- 여기까지 ---
+
 
 		return WordResponse.from(saved);
 	}

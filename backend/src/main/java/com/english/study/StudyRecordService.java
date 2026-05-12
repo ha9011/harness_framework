@@ -142,7 +142,7 @@ public class StudyRecordService {
 			case PATTERN -> patternNames.get(item.getItemId());
 		};
 		if (name == null) {
-			throw new IllegalStateException("학습 기록 항목의 표시 이름을 찾을 수 없습니다");
+			name = "(삭제됨)";
 		}
 		return new StudyRecordItemResponse(item.getItemType(), item.getItemId(), name);
 	}
