@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { PatternResponse, PatternExtractResponse } from "@/lib/types";
+import CremaLoader from "../components/CremaLoader";
 
 interface Props {
   onClose: () => void;
@@ -22,6 +23,7 @@ export default function PatternAddModal({ onClose, onSuccess }: Props) {
     { sentence: "", translation: "" },
   ]);
   const [loading, setLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState<"submit" | "extract" | null>(null);
   const [error, setError] = useState("");
 
   const handleAddExample = () => {
@@ -49,6 +51,7 @@ export default function PatternAddModal({ onClose, onSuccess }: Props) {
     }
 
     setLoading(true);
+    setLoadingType("submit");
     setError("");
 
     try {
@@ -65,11 +68,13 @@ export default function PatternAddModal({ onClose, onSuccess }: Props) {
       }
     } finally {
       setLoading(false);
+      setLoadingType(null);
     }
   };
 
   const handleImageExtract = async (file: File) => {
     setLoading(true);
+    setLoadingType("extract");
     setError("");
 
     try {
@@ -101,6 +106,7 @@ export default function PatternAddModal({ onClose, onSuccess }: Props) {
       }
     } finally {
       setLoading(false);
+      setLoadingType(null);
     }
   };
 
@@ -119,122 +125,133 @@ export default function PatternAddModal({ onClose, onSuccess }: Props) {
           </button>
         </div>
 
-        {/* 모드 전환 탭 */}
-        <div className="bg-soft rounded-[14px] border border-hairline p-1 flex gap-1.5 mb-4">
-          <button
-            onClick={() => setMode("manual")}
-            className={`flex-1 py-2 rounded-[10px] text-xs font-medium ${
-              mode === "manual"
-                ? "bg-raised text-ink shadow-sm"
-                : "text-ink-muted"
-            }`}
-          >
-            직접 입력
-          </button>
-          <button
-            onClick={() => setMode("image")}
-            className={`flex-1 py-2 rounded-[10px] text-xs font-medium ${
-              mode === "image"
-                ? "bg-raised text-ink shadow-sm"
-                : "text-ink-muted"
-            }`}
-          >
-            이미지 추출
-          </button>
-        </div>
-
-        {mode === "image" && (
-          <div className="mb-4">
-            <label className="block">
-              <span className="text-xs text-ink-muted">
-                교재 이미지를 업로드하세요
-              </span>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageExtract(file);
-                }}
-                className="mt-2 block w-full text-xs text-ink-soft"
-              />
-            </label>
+        {loading ? (
+          <div className="py-8">
+            <CremaLoader message={
+              loadingType === "extract"
+                ? "이미지를 분석하고 있어요..."
+                : "패턴을 등록하고 있어요..."
+            } />
           </div>
-        )}
-
-        {/* 직접 입력 폼 */}
-        <div className="flex flex-col gap-3">
-          <input
-            type="text"
-            placeholder="패턴 (예: I want to ~)"
-            value={template}
-            onChange={(e) => setTemplate(e.target.value)}
-            className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
-          />
-          <input
-            type="text"
-            placeholder="설명 (예: ~하고 싶다)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
-          />
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-ink-muted">교재 예문</span>
+        ) : (
+          <>
+            {/* 모드 전환 탭 */}
+            <div className="bg-soft rounded-[14px] border border-hairline p-1 flex gap-1.5 mb-4">
               <button
-                onClick={handleAddExample}
-                className="text-xs text-primary font-medium"
+                onClick={() => setMode("manual")}
+                className={`flex-1 py-2 rounded-[10px] text-xs font-medium ${
+                  mode === "manual"
+                    ? "bg-raised text-ink shadow-sm"
+                    : "text-ink-muted"
+                }`}
               >
-                + 추가
+                직접 입력
+              </button>
+              <button
+                onClick={() => setMode("image")}
+                className={`flex-1 py-2 rounded-[10px] text-xs font-medium ${
+                  mode === "image"
+                    ? "bg-raised text-ink shadow-sm"
+                    : "text-ink-muted"
+                }`}
+              >
+                이미지 추출
               </button>
             </div>
-            {examples.map((ex, i) => (
-              <div key={i} className="flex flex-col gap-1 mb-2">
-                <div className="flex gap-2">
+
+            {mode === "image" && (
+              <div className="mb-4">
+                <label className="block">
+                  <span className="text-xs text-ink-muted">
+                    교재 이미지를 업로드하세요
+                  </span>
                   <input
-                    type="text"
-                    placeholder="영어 예문"
-                    value={ex.sentence}
-                    onChange={(e) =>
-                      handleExampleChange(i, "sentence", e.target.value)
-                    }
-                    className="flex-1 bg-soft rounded-[12px] border border-hairline px-3 py-2 text-xs text-ink placeholder:text-ink-muted"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageExtract(file);
+                    }}
+                    className="mt-2 block w-full text-xs text-ink-soft"
                   />
-                  {examples.length > 1 && (
-                    <button
-                      onClick={() => handleRemoveExample(i)}
-                      className="text-xs text-warn px-1"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  placeholder="해석"
-                  value={ex.translation}
-                  onChange={(e) =>
-                    handleExampleChange(i, "translation", e.target.value)
-                  }
-                  className="bg-soft rounded-[12px] border border-hairline px-3 py-2 text-xs text-ink placeholder:text-ink-muted"
-                />
+                </label>
               </div>
-            ))}
-          </div>
-        </div>
+            )}
+
+            {/* 직접 입력 폼 */}
+            <div className="flex flex-col gap-3">
+              <input
+                type="text"
+                placeholder="패턴 (예: I want to ~)"
+                value={template}
+                onChange={(e) => setTemplate(e.target.value)}
+                className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
+              />
+              <input
+                type="text"
+                placeholder="설명 (예: ~하고 싶다)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
+              />
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-ink-muted">교재 예문</span>
+                  <button
+                    onClick={handleAddExample}
+                    className="text-xs text-primary font-medium"
+                  >
+                    + 추가
+                  </button>
+                </div>
+                {examples.map((ex, i) => (
+                  <div key={i} className="flex flex-col gap-1 mb-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="영어 예문"
+                        value={ex.sentence}
+                        onChange={(e) =>
+                          handleExampleChange(i, "sentence", e.target.value)
+                        }
+                        className="flex-1 bg-soft rounded-[12px] border border-hairline px-3 py-2 text-xs text-ink placeholder:text-ink-muted"
+                      />
+                      {examples.length > 1 && (
+                        <button
+                          onClick={() => handleRemoveExample(i)}
+                          className="text-xs text-warn px-1"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="해석"
+                      value={ex.translation}
+                      onChange={(e) =>
+                        handleExampleChange(i, "translation", e.target.value)
+                      }
+                      className="bg-soft rounded-[12px] border border-hairline px-3 py-2 text-xs text-ink placeholder:text-ink-muted"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleSubmit}
+              className="w-full mt-4 bg-primary text-white rounded-[14px] h-[42px] text-sm font-semibold"
+            >
+              등록
+            </button>
+          </>
+        )}
 
         {error && (
           <p className="text-xs text-warn mt-2">{error}</p>
         )}
-
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full mt-4 bg-primary text-white rounded-[14px] h-[42px] text-sm font-semibold disabled:opacity-50"
-        >
-          {loading ? "처리 중..." : "등록"}
-        </button>
       </div>
     </div>
   );

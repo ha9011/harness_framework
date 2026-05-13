@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import AuthGuard from "../components/AuthGuard";
+import CoffeeSpinner from "../components/CoffeeSpinner";
+import CremaLoader from "../components/CremaLoader";
 import {
   GenerateResponse,
   SentenceResponse,
@@ -110,58 +112,63 @@ function GenerateContent() {
 
       {mode === "generate" && (
         <>
-          {/* 난이도 선택 */}
-          <div>
-            <p className="text-xs font-semibold text-ink-soft uppercase mb-2">
-              난이도
-            </p>
-            <div className="flex gap-2">
-              {LEVELS.map((l) => (
-                <button
-                  key={l.value}
-                  onClick={() => setLevel(l.value)}
-                  className={`flex-1 py-2 rounded-[12px] text-xs font-medium border transition-all ${
-                    level === l.value
-                      ? "bg-primary-soft text-primary-deep border-primary/30"
-                      : "bg-soft text-ink-soft border-hairline"
-                  }`}
-                >
-                  {l.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          {loading ? (
+            <CremaLoader message="예문을 만들고 있어요..." />
+          ) : (
+            <>
+              {/* 난이도 선택 */}
+              <div>
+                <p className="text-xs font-semibold text-ink-soft uppercase mb-2">
+                  난이도
+                </p>
+                <div className="flex gap-2">
+                  {LEVELS.map((l) => (
+                    <button
+                      key={l.value}
+                      onClick={() => setLevel(l.value)}
+                      className={`flex-1 py-2 rounded-[12px] text-xs font-medium border transition-all ${
+                        level === l.value
+                          ? "bg-primary-soft text-primary-deep border-primary/30"
+                          : "bg-soft text-ink-soft border-hairline"
+                      }`}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* 개수 선택 */}
-          <div>
-            <p className="text-xs font-semibold text-ink-soft uppercase mb-2">
-              개수
-            </p>
-            <div className="flex gap-2">
-              {COUNTS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setCount(c)}
-                  className={`flex-1 py-2 rounded-[12px] text-xs font-medium border transition-all ${
-                    count === c
-                      ? "bg-primary-soft text-primary-deep border-primary/30"
-                      : "bg-soft text-ink-soft border-hairline"
-                  }`}
-                >
-                  {c}개
-                </button>
-              ))}
-            </div>
-          </div>
+              {/* 개수 선택 */}
+              <div>
+                <p className="text-xs font-semibold text-ink-soft uppercase mb-2">
+                  개수
+                </p>
+                <div className="flex gap-2">
+                  {COUNTS.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setCount(c)}
+                      className={`flex-1 py-2 rounded-[12px] text-xs font-medium border transition-all ${
+                        count === c
+                          ? "bg-primary-soft text-primary-deep border-primary/30"
+                          : "bg-soft text-ink-soft border-hairline"
+                      }`}
+                    >
+                      {c}개
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* 생성 버튼 */}
-          <button
-            onClick={handleGenerate}
-            disabled={loading}
-            className="bg-primary text-white rounded-[14px] h-[42px] text-sm font-semibold disabled:opacity-50 transition-all"
-          >
-            {loading ? "생성 중..." : "예문 생성"}
-          </button>
+              {/* 생성 버튼 */}
+              <button
+                onClick={handleGenerate}
+                className="bg-primary text-white rounded-[14px] h-[42px] text-sm font-semibold transition-all"
+              >
+                예문 생성
+              </button>
+            </>
+          )}
 
           {error && <p className="text-xs text-warn">{error}</p>}
 
@@ -222,9 +229,10 @@ function GenerateContent() {
       {mode === "history" && (
         <div className="flex flex-col gap-3">
           {historyLoading && (
-            <p className="text-xs text-ink-muted text-center py-4">
-              로딩 중...
-            </p>
+            <div className="flex items-center justify-center gap-2 py-4">
+              <CoffeeSpinner size={16} />
+              <span className="text-xs text-ink-muted">로딩 중...</span>
+            </div>
           )}
           {!historyLoading && history.length === 0 && (
             <p className="text-xs text-ink-muted text-center py-4">

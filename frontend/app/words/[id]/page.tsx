@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import type { WordDetailResponse, WordResponse } from "@/lib/types";
 import AuthGuard from "../../components/AuthGuard";
+import CoffeeSpinner from "../../components/CoffeeSpinner";
 
 function WordDetailContent({
   params,
@@ -59,7 +60,10 @@ function WordDetailContent({
 
   if (loading) {
     return (
-      <p className="text-sm text-ink-muted text-center py-8">불러오는 중...</p>
+      <div className="flex items-center justify-center gap-2 py-8">
+        <CoffeeSpinner />
+        <span className="text-sm text-ink-muted">불러오는 중...</span>
+      </div>
     );
   }
 

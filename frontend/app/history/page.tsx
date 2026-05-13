@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import type { Page, StudyRecordDto } from "@/lib/types";
 import AuthGuard from "../components/AuthGuard";
+import CoffeeSpinner from "../components/CoffeeSpinner";
 
 function HistoryContent() {
   const [records, setRecords] = useState<StudyRecordDto[]>([]);
@@ -46,9 +47,10 @@ function HistoryContent() {
       </h1>
 
       {loading ? (
-        <p className="text-sm text-ink-muted text-center py-8">
-          불러오는 중...
-        </p>
+        <div className="flex items-center justify-center gap-2 py-8">
+          <CoffeeSpinner />
+          <span className="text-sm text-ink-muted">불러오는 중...</span>
+        </div>
       ) : records.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-sm text-ink-muted">학습 기록이 없습니다</p>

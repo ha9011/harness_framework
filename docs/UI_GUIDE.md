@@ -115,7 +115,32 @@ warm: bg-primarySoft text-primaryDeep
 - **버튼 누름**: translateY(1px) on mouseDown, 0.12s ease
 - **탭 전환**: all 0.15s ease
 - **커피나무 시들음/회복**: opacity + 색상 변화 transition
+- **로딩 (CremaLoader)**: 크레마 나선 SVG — opacity 0→1→0 + rotate 360deg + scale 0.3→1→0.3, 2.5s ease-in-out infinite
+- **로딩 (CoffeeSpinner)**: 커피잔 SVG 전체 회전, 1s linear infinite
 - 그 외 불필요한 애니메이션 금지
+
+## 로딩 컴포넌트
+
+### CremaLoader (AI 호출용)
+```
+중앙 정렬, 머그잔 탑뷰 SVG (120x120 viewBox)
+소서: kraft (#E8DCC8) — 외곽 원
+머그잔: primary (#A67C52) — 중간 원
+커피: mocha-deep (#523926) — 내부 원
+크레마: primary-soft (#E8D5BE) — 나선 path, crema-swirl 애니메이션
+손잡이: 우측 반원 path
+아래 텍스트: text-sm text-ink-muted (message prop)
+접근성: role="status" aria-live="polite"
+```
+
+### CoffeeSpinner (일반 로딩용)
+```
+인라인 사이드뷰 커피잔 SVG (20x20 기본)
+coffee-spin 애니메이션으로 회전
+텍스트와 나란히 배치:
+  flex items-center justify-center gap-2 py-8
+  <CoffeeSpinner /> + <span text-sm text-ink-muted>불러오는 중...</span>
+```
 
 ## 아이콘
 - SVG 인라인, strokeWidth 1.5~2
