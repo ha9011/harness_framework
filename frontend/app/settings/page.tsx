@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import type { UserSettingResponse } from "@/lib/types";
 import AuthGuard from "../components/AuthGuard";
+import CoffeeSpinner from "../components/CoffeeSpinner";
 
 const REVIEW_COUNT_OPTIONS = [10, 20, 30];
 
@@ -45,8 +46,9 @@ function SettingsContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-sm text-ink-muted">불러오는 중...</p>
+      <div className="flex items-center justify-center gap-2 py-20">
+        <CoffeeSpinner />
+        <span className="text-sm text-ink-muted">불러오는 중...</span>
       </div>
     );
   }

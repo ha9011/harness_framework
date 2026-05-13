@@ -31,7 +31,7 @@ harness_framework/
 │       ├── review/             # 복습 카드 ([단어][패턴][문장] 탭)
 │       ├── history/            # 학습 기록
 │       ├── settings/           # 설정
-│       ├── components/         # 공통 컴포넌트 (AuthGuard 포함)
+│       ├── components/         # 공통 컴포넌트 (AuthGuard, CremaLoader, CoffeeSpinner 포함)
 │       └── lib/
 │           ├── api.ts          # 백엔드 API 호출 (credentials: include)
 │           ├── auth-context.tsx # 인증 상태 Context (AuthProvider, useAuth)

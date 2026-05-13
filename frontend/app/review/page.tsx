@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { ReviewCard, ReviewResultResponse } from "@/lib/types";
 import FlipCard from "../components/FlipCard";
 import AuthGuard from "../components/AuthGuard";
+import CoffeeSpinner from "../components/CoffeeSpinner";
 
 const TABS = [
   { value: "WORD", label: "단어" },
@@ -148,8 +149,9 @@ function ReviewContent() {
 
       {/* 로딩 */}
       {loading && (
-        <div className="text-center py-12 text-ink-muted text-sm">
-          카드를 불러오는 중...
+        <div className="flex items-center justify-center gap-2 py-12 text-ink-muted text-sm">
+          <CoffeeSpinner />
+          <span>카드를 불러오는 중...</span>
         </div>
       )}
 

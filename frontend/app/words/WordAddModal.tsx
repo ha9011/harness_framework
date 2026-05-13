@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { WordResponse, BulkCreateResponse } from "@/lib/types";
+import CremaLoader from "../components/CremaLoader";
 
 interface Props {
   onClose: () => void;
@@ -72,71 +73,77 @@ export default function WordAddModal({ onClose, onSuccess }: Props) {
           </button>
         </div>
 
-        {/* 탭 */}
-        <div className="bg-soft rounded-[14px] border border-hairline p-1 flex gap-1.5 mb-4">
-          <button
-            onClick={() => setMode("single")}
-            className={`flex-1 py-2 rounded-[10px] text-xs font-medium ${
-              mode === "single"
-                ? "bg-raised text-ink font-semibold shadow-sm"
-                : "text-ink-muted"
-            }`}
-          >
-            단건 등록
-          </button>
-          <button
-            onClick={() => setMode("bulk")}
-            className={`flex-1 py-2 rounded-[10px] text-xs font-medium ${
-              mode === "bulk"
-                ? "bg-raised text-ink font-semibold shadow-sm"
-                : "text-ink-muted"
-            }`}
-          >
-            벌크 등록
-          </button>
-        </div>
-
-        {mode === "single" ? (
-          <div className="flex flex-col gap-3">
-            <input
-              type="text"
-              placeholder="영어 단어"
-              value={word}
-              onChange={(e) => setWord(e.target.value)}
-              className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
-            />
-            <input
-              type="text"
-              placeholder="뜻"
-              value={meaning}
-              onChange={(e) => setMeaning(e.target.value)}
-              className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
-            />
-            <button
-              onClick={handleSingleSubmit}
-              disabled={loading}
-              className="bg-primary text-white rounded-[14px] h-[42px] text-sm font-semibold disabled:opacity-50"
-            >
-              {loading ? "등록 중..." : "등록"}
-            </button>
+        {loading ? (
+          <div className="py-8">
+            <CremaLoader message="단어를 등록하고 있어요..." />
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            <textarea
-              placeholder={'[{"word":"apple","meaning":"사과"},...]'}
-              value={bulkJson}
-              onChange={(e) => setBulkJson(e.target.value)}
-              rows={5}
-              className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted resize-none"
-            />
-            <button
-              onClick={handleBulkSubmit}
-              disabled={loading}
-              className="bg-primary text-white rounded-[14px] h-[42px] text-sm font-semibold disabled:opacity-50"
-            >
-              {loading ? "등록 중..." : "벌크 등록"}
-            </button>
-          </div>
+          <>
+            {/* 탭 */}
+            <div className="bg-soft rounded-[14px] border border-hairline p-1 flex gap-1.5 mb-4">
+              <button
+                onClick={() => setMode("single")}
+                className={`flex-1 py-2 rounded-[10px] text-xs font-medium ${
+                  mode === "single"
+                    ? "bg-raised text-ink font-semibold shadow-sm"
+                    : "text-ink-muted"
+                }`}
+              >
+                단건 등록
+              </button>
+              <button
+                onClick={() => setMode("bulk")}
+                className={`flex-1 py-2 rounded-[10px] text-xs font-medium ${
+                  mode === "bulk"
+                    ? "bg-raised text-ink font-semibold shadow-sm"
+                    : "text-ink-muted"
+                }`}
+              >
+                벌크 등록
+              </button>
+            </div>
+
+            {mode === "single" ? (
+              <div className="flex flex-col gap-3">
+                <input
+                  type="text"
+                  placeholder="영어 단어"
+                  value={word}
+                  onChange={(e) => setWord(e.target.value)}
+                  className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
+                />
+                <input
+                  type="text"
+                  placeholder="뜻"
+                  value={meaning}
+                  onChange={(e) => setMeaning(e.target.value)}
+                  className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted"
+                />
+                <button
+                  onClick={handleSingleSubmit}
+                  className="bg-primary text-white rounded-[14px] h-[42px] text-sm font-semibold"
+                >
+                  등록
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <textarea
+                  placeholder={'[{"word":"apple","meaning":"사과"},...]'}
+                  value={bulkJson}
+                  onChange={(e) => setBulkJson(e.target.value)}
+                  rows={5}
+                  className="bg-soft rounded-[12px] border border-hairline px-4 py-3 text-sm text-ink placeholder:text-ink-muted resize-none"
+                />
+                <button
+                  onClick={handleBulkSubmit}
+                  className="bg-primary text-white rounded-[14px] h-[42px] text-sm font-semibold"
+                >
+                  벌크 등록
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {error && (

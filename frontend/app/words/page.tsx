@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import type { Page, WordListResponse } from "@/lib/types";
 import WordAddModal from "./WordAddModal";
 import AuthGuard from "../components/AuthGuard";
+import CoffeeSpinner from "../components/CoffeeSpinner";
 
 interface FetchState {
   words: WordListResponse[];
@@ -115,7 +116,10 @@ function WordsContent() {
 
       {/* 단어 목록 */}
       {loading ? (
-        <p className="text-sm text-ink-muted text-center py-8">불러오는 중...</p>
+        <div className="flex items-center justify-center gap-2 py-8">
+          <CoffeeSpinner />
+          <span className="text-sm text-ink-muted">불러오는 중...</span>
+        </div>
       ) : words.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-sm text-ink-muted">등록된 단어가 없습니다</p>

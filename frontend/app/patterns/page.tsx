@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import type { Page, PatternListResponse } from "@/lib/types";
 import PatternAddModal from "./PatternAddModal";
 import AuthGuard from "../components/AuthGuard";
+import CoffeeSpinner from "../components/CoffeeSpinner";
 
 interface FetchState {
   patterns: PatternListResponse[];
@@ -73,7 +74,10 @@ function PatternsContent() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-ink-muted text-center py-8">불러오는 중...</p>
+        <div className="flex items-center justify-center gap-2 py-8">
+          <CoffeeSpinner />
+          <span className="text-sm text-ink-muted">불러오는 중...</span>
+        </div>
       ) : patterns.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-sm text-ink-muted">등록된 패턴이 없습니다</p>

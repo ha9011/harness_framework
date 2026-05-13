@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import CoffeeSpinner from "./CoffeeSpinner";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -16,8 +17,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-sm text-ink-muted">불러오는 중...</p>
+      <div className="flex items-center justify-center gap-2 py-20">
+        <CoffeeSpinner />
+        <span className="text-sm text-ink-muted">불러오는 중...</span>
       </div>
     );
   }
