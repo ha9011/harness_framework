@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "frontend-docker",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-14T15:05:34+0900",
+      "summary": "frontend/Dockerfile(node:20-alpine 3-stage, non-root nextjs user, HOSTNAME=0.0.0.0), .dockerignore, next.config.ts(output:standalone + turbopack.root=__dirname — 부모 lockfile 감지로 인한 standalone 출력 중첩 방지, Next 16 문서가 documented한 fix), lib/api.ts BASE_URL을 \"/api\" 상대경로로 1줄 변경 — npm run build 성공 + .next/standalone/server.js 존재 확인, Vitest 13개 회귀 없음, docker build 성공(190MB), 컨테이너 :3001 부팅 후 curl 200 응답 확인",
+      "completed_at": "2026-05-14T15:11:01+0900"
     },
     {
       "step": 2,
