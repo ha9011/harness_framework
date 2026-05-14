@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.gitignore
+.idea
+coverage
+.env*
+README.md
+*.log
+.DS_Store
