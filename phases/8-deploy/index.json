@@ -1,0 +1,30 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "8-deploy",
+  "steps": [
+    {
+      "step": 0,
+      "name": "backend-docker",
+      "status": "completed",
+      "started_at": "2026-05-14T15:02:43+0900",
+      "summary": "backend/Dockerfile(multi-stage, non-root, /app/logs, JAVA_OPTS), .dockerignore(application-local.yml/시크릿 제외), application-prod.yml(환경변수만, fail-fast, forward-headers-strategy=framework) 작성 — docker build 성공(314MB), 기존 ./gradlew test 통과, SPRING_PROFILES_ACTIVE=prod로 부팅 시 JWT_SECRET placeholder 미해결로 즉시 종료 확인",
+      "completed_at": "2026-05-14T15:05:33+0900"
+    },
+    {
+      "step": 1,
+      "name": "frontend-docker",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "prod-compose-nginx",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "ci-deploy-and-manual",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-05-14T15:02:43+0900"
+}
