@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "ci-deploy-and-manual",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-14T15:15:24+0900",
+      "summary": ".github/workflows/deploy.yml(main push + workflow_dispatch 트리거, build-backend/build-frontend 병렬 GHCR push with type=gha 캐시, deploy job appleboy/ssh-action@v1.2.0로 미니PC SSH 접속 후 git pull && docker compose pull && up -d && image prune -f), docs/DEPLOYMENT.md(A~G 7개 섹션 — A는 머지 완료 안내, B 미니PC Docker 설치+SSH 키+/.env, C GitHub Secrets+권한, D pg_dump→scp→pg_restore→검증, E 첫 푸시+GHCR public/PAT, F Cloudflare DNS+브라우저 e2e+로그 확인, G 일반/수동/롤백/자주쓰는명령/문제해결 + 시크릿 회전 절차 + 후속 권장사항) — python3 yaml.safe_load 통과, AC 전체 통과(appleboy/ssh-action 1회, ghcr.io 3회, build-backend/build-frontend/deploy 모두 존재, A~G 7개 섹션 모두 존재), permissions: packages:write가 build job 2개에만 부여되어 deploy job은 최소 권한 원칙 준수, 시크릿 평문 없음(${{ secrets.* }} 사용), 도메인/IP는 <...> placeholder로 처리",
+      "completed_at": "2026-05-14T15:18:35+0900"
     }
   ],
   "created_at": "2026-05-14T15:02:43+0900"
