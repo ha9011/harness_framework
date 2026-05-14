@@ -31,7 +31,7 @@ docker compose -f docker-compose.prod.yml up -d  # 운영 4-서비스 (미니PC 
 - DB 스키마: `spring.jpa.hibernate.ddl-auto=update` (개발). JPA Entity 기반 자동 생성
 - CORS: CorsConfig.java에서 localhost:3000 허용 (개발 환경)
 - Gemini 재시도: 총 3회 시도 (즉시 → 1초 후 → 3초 후). 3회 모두 실패 시 fallback
-- 운영 profile: `application-prod.yml` — `SPRING_PROFILES_ACTIVE=prod`로 활성화. DB URL/계정/JWT/Gemini 키 모두 환경변수로만 받음(기본값 없음, fail-fast). 운영 시크릿은 미니PC `/opt/harness/.env`에 보관(`.gitignore`)
+- 운영 profile: `application-prod.yml` — `SPRING_PROFILES_ACTIVE=prod`로 활성화. DB URL/계정/JWT/Gemini 키 모두 환경변수로만 받음(기본값 없음, fail-fast). 운영 시크릿은 미니PC `/home/hadong/work/project/english/.env`에 보관(`.gitignore`)
 - 운영 배포: `main` push → GitHub Actions가 GHCR 빌드 → SSH로 미니PC `docker compose pull/up`. 상세는 `docs/DEPLOYMENT.md` 참조
 
 ## 에러 처리 원칙

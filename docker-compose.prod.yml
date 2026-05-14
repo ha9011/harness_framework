@@ -32,7 +32,7 @@ services:
       TZ: Asia/Seoul
       JAVA_OPTS: "-Xms256m -Xmx512m"
     volumes:
-      - /opt/harness/logs:/app/logs
+      - /home/hadong/work/project/english/logs:/app/logs
     networks: [internal]
 
   frontend:

@@ -55,8 +55,8 @@
 - **CI/CD**: main 브랜치 push → GitHub Actions가 backend/frontend 이미지를 GHCR(`ghcr.io/ha9011/harness_framework-{backend,frontend}`)에 빌드/push → SSH(`appleboy/ssh-action`)로 미니PC 접속해 `git pull && docker compose pull && up -d`
 - **운영 profile**: Spring `prod` profile 신규 추가. DB URL/계정/JWT/Gemini API 키를 모두 환경변수로만 받음(기본값 없음). 기존 `local` profile은 그대로 유지
 - **DB 이전**: 로컬 PostgreSQL을 `pg_dump`로 1회 덤프 후 미니PC 운영 컨테이너에 `pg_restore`로 복원. `ddl-auto: validate`이므로 복원 후에 backend 컨테이너 부팅
-- **시크릿 관리**: 미니PC `/opt/harness/.env`에 평문 보관(`chmod 600`). compose가 자동 로드. 운영 DB 비밀번호/JWT secret은 `openssl rand`로 새로 생성. Gemini API 키도 운영용 신규 발급
-- **로그 처리**: backend 컨테이너의 `/app/logs`를 미니PC `/opt/harness/logs`에 바인드 마운트 → 호스트에서 `tail -f` 가능. 기존 logback-spring.xml의 `prod` 프로파일 블록(JSON 콘솔 + 파일 롤링)을 그대로 활용
+- **시크릿 관리**: 미니PC `/home/hadong/work/project/english/.env`에 평문 보관(`chmod 600`). compose가 자동 로드. 운영 DB 비밀번호/JWT secret은 `openssl rand`로 새로 생성. Gemini API 키도 운영용 신규 발급
+- **로그 처리**: backend 컨테이너의 `/app/logs`를 미니PC `/home/hadong/work/project/english/logs`에 바인드 마운트 → 호스트에서 `tail -f` 가능. 기존 logback-spring.xml의 `prod` 프로파일 블록(JSON 콘솔 + 파일 롤링)을 그대로 활용
 - **배포 인증 흐름**: GitHub Actions가 `~/.ssh/gha_deploy` 전용 키로 미니PC 22번 포트 접속(공유기 포트포워딩 기존). GHCR 패키지는 public 가시성 권장(또는 미니PC에서 PAT로 `docker login`)
 - **엣지케이스**:
   - 첫 빌드 후 GHCR 패키지가 private이면 미니PC에서 `unauthorized: denied` → public 가시성 변경 또는 PAT 로그인

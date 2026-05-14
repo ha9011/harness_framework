@@ -209,7 +209,7 @@ jwt:
   │    └─ location /      → proxy_pass http://frontend:3000;    │
   │                                                             │
   │  backend (Spring Boot, SPRING_PROFILES_ACTIVE=prod)         │
-  │    └─ /opt/harness/logs:/app/logs (호스트 바인드 마운트)     │
+  │    └─ /home/hadong/work/project/english/logs:/app/logs (호스트 바인드 마운트)     │
   │                                                             │
   │  frontend (Next.js standalone, NODE_ENV=production)         │
   │                                                             │
@@ -240,7 +240,7 @@ jwt:
   └─ job: deploy (needs: [build-backend, build-frontend])
        appleboy/ssh-action: secrets {SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, SSH_PORT}
        script:
-         cd /opt/harness
+         cd /home/hadong/work/project/english
          git pull --ff-only
          docker compose -f docker-compose.prod.yml pull
          docker compose -f docker-compose.prod.yml up -d
@@ -249,7 +249,7 @@ jwt:
 
 ## 운영 시크릿
 ```
-미니PC /opt/harness/.env (chmod 600, gitignore)
+미니PC /home/hadong/work/project/english/.env (chmod 600, gitignore)
 ├── POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD   # 새로 생성 (openssl rand)
 ├── GEMINI_API_KEY                                    # 운영용 신규 발급
 ├── GEMINI_MODEL=gemini-2.5-flash

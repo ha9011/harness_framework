@@ -64,11 +64,10 @@ SSH 재접속 후 동작 확인:
 ### B-2. 배포 디렉토리 준비
 
 ```bash
-[minipc] sudo mkdir -p /opt/harness /opt/harness/logs
-[minipc] sudo chown -R $USER:$USER /opt/harness
+[minipc] mkdir -p /home/hadong/work/project/english/logs
 ```
 
-`/opt/harness/logs`는 backend 컨테이너의 `/app/logs`로 바인드 마운트되어, 호스트에서 `tail -f`로 로그를 직접 확인할 수 있게 된다.
+`/home/hadong/work/project/english/logs`는 backend 컨테이너의 `/app/logs`로 바인드 마운트되어, 호스트에서 `tail -f`로 로그를 직접 확인할 수 있게 된다.
 
 ### B-3. 미니PC에 deploy 전용 SSH 키 등록
 
@@ -101,7 +100,7 @@ GitHub Actions가 22번 포트로 들어올 때 사용할 키를 만든다. 이 
 ### B-4. 리포지토리 클론
 
 ```bash
-[minipc] cd /opt/harness
+[minipc] cd /home/hadong/work/project/english
 [minipc] git clone https://github.com/<your-org-or-user>/harness_framework.git .
 ```
 
@@ -110,7 +109,7 @@ GitHub Actions가 22번 포트로 들어올 때 사용할 키를 만든다. 이 
 ### B-5. `.env` 작성 (시크릿)
 
 ```bash
-[minipc] cd /opt/harness
+[minipc] cd /home/hadong/work/project/english
 [minipc] cp .env.example .env
 [minipc] chmod 600 .env
 ```
@@ -182,13 +181,13 @@ GHCR에 이미지를 push하려면 `packages: write` 권한이 필요하고, 이
 ### D-2. 미니PC로 복사
 
 ```bash
-[local] scp english_app.dump <minipc-user>@<minipc-host>:/opt/harness/
+[local] scp english_app.dump <minipc-user>@<minipc-host>:/home/hadong/work/project/english/
 ```
 
 ### D-3. 미니PC에서 postgres만 먼저 기동
 
 ```bash
-[minipc] cd /opt/harness
+[minipc] cd /home/hadong/work/project/english
 [minipc] git pull --ff-only
 [minipc] docker compose -f docker-compose.prod.yml up -d postgres
 [minipc] docker compose -f docker-compose.prod.yml ps    # postgres만 running, healthy 확인
@@ -201,7 +200,7 @@ postgres가 `healthy` 상태가 될 때까지 10초 정도 기다린다.
 ```bash
 [minipc] docker compose -f docker-compose.prod.yml exec -T postgres \
            pg_restore -U app -d english_app --no-owner --clean --if-exists \
-           < /opt/harness/english_app.dump
+           < /home/hadong/work/project/english/english_app.dump
 ```
 
 중간에 일부 NOTICE/ERROR가 보일 수 있으나, 본 데이터 객체 복원이 끝나면 정상.
@@ -220,11 +219,11 @@ postgres가 `healthy` 상태가 될 때까지 10초 정도 기다린다.
 
 ### D-6. 덤프 파일 보관
 
-복원 성공 확인 후 `/opt/harness/english_app.dump`는 그대로 두거나 `/opt/harness/backups/initial.dump`로 옮겨 보관(롤백/복구용 1회 백업).
+복원 성공 확인 후 `/home/hadong/work/project/english/english_app.dump`는 그대로 두거나 `/home/hadong/work/project/english/backups/initial.dump`로 옮겨 보관(롤백/복구용 1회 백업).
 
 ```bash
-[minipc] mkdir -p /opt/harness/backups
-[minipc] mv /opt/harness/english_app.dump /opt/harness/backups/initial.dump
+[minipc] mkdir -p /home/hadong/work/project/english/backups
+[minipc] mv /home/hadong/work/project/english/english_app.dump /home/hadong/work/project/english/backups/initial.dump
 ```
 
 ---
@@ -319,11 +318,11 @@ E-3에서 가시성을 public으로 변경했다면, Actions 탭에서 실패한
 [minipc] docker compose -f docker-compose.prod.yml logs -f backend
 # traceId가 포함된 prod JSON 포맷 로그가 흐르는지 확인
 
-[minipc] tail -f /opt/harness/logs/app.log
+[minipc] tail -f /home/hadong/work/project/english/logs/app.log
 # 파일에도 동일 로그가 기록되는지 확인 (logback 파일 롤링이 동작)
 ```
 
-`prod` 프로파일이 활성화되면 logback이 `/app/logs/app.log`(30일 롤링, 3GB 상한) 와 `/app/logs/error.log`(ERROR 이상, 90일 보관)를 생성한다. 컨테이너의 `/app/logs`는 호스트 `/opt/harness/logs`로 바인드되어 있어 직접 tail 가능.
+`prod` 프로파일이 활성화되면 logback이 `/app/logs/app.log`(30일 롤링, 3GB 상한) 와 `/app/logs/error.log`(ERROR 이상, 90일 보관)를 생성한다. 컨테이너의 `/app/logs`는 호스트 `/home/hadong/work/project/english/logs`로 바인드되어 있어 직접 tail 가능.
 
 ---
 
@@ -344,7 +343,7 @@ E-3에서 가시성을 public으로 변경했다면, Actions 탭에서 실패한
 ### G-3. 롤백 (이전 SHA로 복귀)
 
 ```bash
-[minipc] cd /opt/harness
+[minipc] cd /home/hadong/work/project/english
 
 # docker-compose.prod.yml의 image: ...:latest 줄을
 # image: ghcr.io/<repo>-backend:<old-sha> 형태로 임시 변경
@@ -377,7 +376,7 @@ E-3에서 가시성을 public으로 변경했다면, Actions 탭에서 실패한
 |------|------------|
 | deploy job이 `unauthorized: denied`로 실패 | GHCR 패키지가 private + 미니PC에 docker login 안 됨. E-3 참조 |
 | backend 부팅 실패 `relation does not exist` | D단계 pg_restore가 빠졌거나 실패. D-5로 테이블 존재 확인 |
-| backend 부팅 실패 `Could not resolve placeholder 'JWT_SECRET'` | `/opt/harness/.env`에 해당 키 누락 또는 compose의 `environment` 매핑 누락 |
+| backend 부팅 실패 `Could not resolve placeholder 'JWT_SECRET'` | `/home/hadong/work/project/english/.env`에 해당 키 누락 또는 compose의 `environment` 매핑 누락 |
 | 외부 접근만 502 | Cloudflare가 origin과 통신 못 함. 공유기 80 포트포워딩, 미니PC 방화벽(`sudo ufw status`), `docker compose ps`의 nginx 상태 확인 |
 | 외부 접근에서 무한 리다이렉트 | Cloudflare SSL mode가 Full인데 origin이 HTTPS 안 함. Flexible로 변경하거나 후속 권장사항 #1로 Full(strict) + Origin Certificate 셋업 |
 | 파일 업로드 413 Request Entity Too Large | nginx `client_max_body_size` 누락. `nginx/conf.d/default.conf`에 `10M`로 설정되어 있어야 한다 |
@@ -408,7 +407,7 @@ E-3에서 가시성을 public으로 변경했다면, Actions 탭에서 실패한
    - 대시보드에서 Origin Certificate 발급 → 미니PC `./nginx/certs/`에 배치 → `nginx/conf.d/default.conf`를 `listen 443 ssl;` 형태로 교체 → docker-compose에 `443:443` 포트와 certs 볼륨 추가 → 공유기 443 포트포워딩 → CF SSL mode를 Full(strict)로 변경
    - 또는 **Cloudflare Tunnel**(`cloudflared` 컨테이너 추가)로 전환하면 포트포워딩 자체가 불필요
 2. **SSH 강화**: `sshd_config`에서 `PasswordAuthentication no`, `PermitRootLogin no`. `fail2ban` 설치
-3. **백업 cron**: 매일 새벽 `pg_dump`로 `/opt/harness/backups/`에 덤프, 14일 보관, 외부 스토리지(R2/S3)로 주기 동기화
+3. **백업 cron**: 매일 새벽 `pg_dump`로 `/home/hadong/work/project/english/backups/`에 덤프, 14일 보관, 외부 스토리지(R2/S3)로 주기 동기화
 4. **Spring Actuator 도입**: `/api/actuator/health`를 nginx upstream health check 또는 외부 헬스체크 도구에 연결
 5. **CORS 외부화**: 외부 origin 호출 케이스가 생기면 `SecurityConfig`의 origin 리스트를 `app.cors.allowed-origins` 프로퍼티로 외부화
 6. **모니터링/알림**: Slack/PagerDuty 연동, prod 로그를 ELK/CloudWatch로 전송

@@ -70,7 +70,7 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             set -e
-            cd /opt/harness
+            cd /home/hadong/work/project/english
             git pull --ff-only
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
