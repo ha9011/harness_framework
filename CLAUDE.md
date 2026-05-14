@@ -17,12 +17,13 @@
 - 커밋 메시지는 conventional commits 형식을 따를 것 (feat:, fix:, docs:, refactor:)
 
 ## 명령어
-docker compose up -d                # PostgreSQL 기동
+docker compose up -d                # PostgreSQL 기동 (개발용)
 cd backend && ./gradlew test        # 백엔드 테스트
 cd backend && ./gradlew bootRun     # 백엔드 개발 서버 (localhost:8080)
 cd frontend && npm run dev          # 프론트엔드 개발 서버 (localhost:3000)
 cd frontend && npm run build        # 프론트엔드 빌드
 cd frontend && npm run lint         # ESLint
+docker compose -f docker-compose.prod.yml up -d  # 운영 4-서비스 (미니PC 또는 로컬 시뮬레이션)
 
 ## 환경 설정
 - Gemini API 키: 환경 변수 `GEMINI_API_KEY`로 주입. backend/src/main/resources/application.yml에서 `${GEMINI_API_KEY}` 참조
@@ -30,6 +31,8 @@ cd frontend && npm run lint         # ESLint
 - DB 스키마: `spring.jpa.hibernate.ddl-auto=update` (개발). JPA Entity 기반 자동 생성
 - CORS: CorsConfig.java에서 localhost:3000 허용 (개발 환경)
 - Gemini 재시도: 총 3회 시도 (즉시 → 1초 후 → 3초 후). 3회 모두 실패 시 fallback
+- 운영 profile: `application-prod.yml` — `SPRING_PROFILES_ACTIVE=prod`로 활성화. DB URL/계정/JWT/Gemini 키 모두 환경변수로만 받음(기본값 없음, fail-fast). 운영 시크릿은 미니PC `/opt/harness/.env`에 보관(`.gitignore`)
+- 운영 배포: `main` push → GitHub Actions가 GHCR 빌드 → SSH로 미니PC `docker compose pull/up`. 상세는 `docs/DEPLOYMENT.md` 참조
 
 ## 에러 처리 원칙
 - Gemini API 실패 → 보강 없이 저장 (단건), 부분 성공 (벌크). 총 3회 시도 후 fallback

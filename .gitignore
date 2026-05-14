@@ -13,6 +13,7 @@ harness-review.md
 
 # local config
 application-local.yml
+.env
 
 # phase execution outputs
 phases/**/phase*-output.json

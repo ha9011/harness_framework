@@ -39,6 +39,11 @@
       "dir": "7-loading-components",
       "status": "completed",
       "completed_at": "2026-05-13T09:55:35+0900"
+    },
+    {
+      "dir": "8-deploy",
+      "status": "completed",
+      "completed_at": "2026-05-14T15:18:35+0900"
     }
   ]
 }

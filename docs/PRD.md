@@ -47,6 +47,26 @@
 - **테스트 영향**: 테스트는 profile 미지정 → logback default 프로파일 (INFO 콘솔, SQL OFF). MdcLoggingFilter가 @Component로 테스트에서도 동작하나 해 없음
 - **제외**: Actuator/Prometheus(별도 작업), 요청 body 로깅(민감정보), AOP(Filter로 충분)
 
+## 기능 13: 미니PC 도커 배포 + GitHub Actions CI/CD (Phase 8-deploy)
+- **목표**: 영어 학습기를 사용자 미니PC에 도커로 배포하고 GitHub Actions로 자동 배포 파이프라인을 구성. 외부 도메인 + HTTPS로 실제 운영 환경처럼 사용
+- **인프라 구성**: PostgreSQL 16 + Spring Boot + Next.js + Nginx 리버스 프록시 4개 컨테이너. 모두 도커 네트워크 내부 통신, Nginx만 80 외부 노출
+- **도메인 구조**: 단일 도메인 + 경로 분기. `/api/*` → backend:8080, `/` → frontend:3000. 같은 origin이므로 브라우저 CORS preflight 없음. Frontend API URL은 `/api` 상대경로로 변경
+- **HTTPS**: 사용자 도메인이 Cloudflare 등록, **Flexible SSL 모드** 사용(브라우저↔CF는 HTTPS, CF↔미니PC는 HTTP). 후속 단계에서 Full(strict) 또는 Cloudflare Tunnel로 보안 강화 권장
+- **CI/CD**: main 브랜치 push → GitHub Actions가 backend/frontend 이미지를 GHCR(`ghcr.io/ha9011/harness_framework-{backend,frontend}`)에 빌드/push → SSH(`appleboy/ssh-action`)로 미니PC 접속해 `git pull && docker compose pull && up -d`
+- **운영 profile**: Spring `prod` profile 신규 추가. DB URL/계정/JWT/Gemini API 키를 모두 환경변수로만 받음(기본값 없음). 기존 `local` profile은 그대로 유지
+- **DB 이전**: 로컬 PostgreSQL을 `pg_dump`로 1회 덤프 후 미니PC 운영 컨테이너에 `pg_restore`로 복원. `ddl-auto: validate`이므로 복원 후에 backend 컨테이너 부팅
+- **시크릿 관리**: 미니PC `/opt/harness/.env`에 평문 보관(`chmod 600`). compose가 자동 로드. 운영 DB 비밀번호/JWT secret은 `openssl rand`로 새로 생성. Gemini API 키도 운영용 신규 발급
+- **로그 처리**: backend 컨테이너의 `/app/logs`를 미니PC `/opt/harness/logs`에 바인드 마운트 → 호스트에서 `tail -f` 가능. 기존 logback-spring.xml의 `prod` 프로파일 블록(JSON 콘솔 + 파일 롤링)을 그대로 활용
+- **배포 인증 흐름**: GitHub Actions가 `~/.ssh/gha_deploy` 전용 키로 미니PC 22번 포트 접속(공유기 포트포워딩 기존). GHCR 패키지는 public 가시성 권장(또는 미니PC에서 PAT로 `docker login`)
+- **엣지케이스**:
+  - 첫 빌드 후 GHCR 패키지가 private이면 미니PC에서 `unauthorized: denied` → public 가시성 변경 또는 PAT 로그인
+  - 파일 업로드 413 → nginx `client_max_body_size 10M` (Spring multipart 10MB와 정합)
+  - Cloudflare가 `X-Forwarded-Proto: https`를 보내므로 Spring `forward-headers-strategy: framework`로 원래 scheme 인식
+  - `ddl-auto: validate` 상태에서 빈 DB로 부팅 시 실패 → DB 복원 후 backend 컨테이너 기동 순서 준수
+  - 동적 공인 IP 환경에서는 DDNS 필수
+- **테스트 영향**: 인프라 구성 변경이므로 기존 테스트 영향 없음. 빌드 검증은 `docker build`로, 통합 검증은 `docker compose -f docker-compose.prod.yml up`으로 수행(JUnit/MockMvc와 무관)
+- **범위 제외**: HTTPS Full(strict) 전환, Cloudflare Tunnel, 모니터링/알림, 자동 백업, SSH key-only 강화는 후속 phase 또는 운영 매뉴얼 권장사항으로 분리
+
 ## 기능 12: 카페 테마 로딩 컴포넌트
 - **목표**: API 대기 시 카페 테마에 맞는 감성적 로딩 애니메이션 제공. 기존 "불러오는 중..." 텍스트를 시각적 컴포넌트로 교체
 - **CremaLoader (큰 로딩)**: 머그잔 탑뷰 SVG + 크레마 회전 애니메이션. AI 호출 등 오래 걸리는 요청에 사용. 상황별 메시지 표시 ("예문을 만들고 있어요...", "단어를 등록하고 있어요..." 등)
@@ -73,7 +93,9 @@
 
 ### MVP 제외 사항 (다음 Phase 후보)
 - 닉네임/비밀번호 변경
-- 미니PC 배포 — Docker Compose로 백엔드+프론트+DB 전체 컨테이너화, 셀프호스팅
+- HTTPS Full(strict) 전환 또는 Cloudflare Tunnel (운영 보안 강화)
+- 운영 모니터링/알림 (Actuator, Slack/PagerDuty 연동)
+- 자동 백업 cron (pg_dump 스케줄 + 외부 스토리지 동기화)
 - TTS/STT 말하기 기능 (Web Speech API)
 - 퀴즈/빈칸 테스트
 - 즐겨찾기

@@ -1,0 +1,40 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "8-deploy",
+  "steps": [
+    {
+      "step": 0,
+      "name": "backend-docker",
+      "status": "completed",
+      "started_at": "2026-05-14T15:02:43+0900",
+      "summary": "backend/Dockerfile(multi-stage, non-root, /app/logs, JAVA_OPTS), .dockerignore(application-local.yml/시크릿 제외), application-prod.yml(환경변수만, fail-fast, forward-headers-strategy=framework) 작성 — docker build 성공(314MB), 기존 ./gradlew test 통과, SPRING_PROFILES_ACTIVE=prod로 부팅 시 JWT_SECRET placeholder 미해결로 즉시 종료 확인",
+      "completed_at": "2026-05-14T15:05:33+0900"
+    },
+    {
+      "step": 1,
+      "name": "frontend-docker",
+      "status": "completed",
+      "started_at": "2026-05-14T15:05:34+0900",
+      "summary": "frontend/Dockerfile(node:20-alpine 3-stage, non-root nextjs user, HOSTNAME=0.0.0.0), .dockerignore, next.config.ts(output:standalone + turbopack.root=__dirname — 부모 lockfile 감지로 인한 standalone 출력 중첩 방지, Next 16 문서가 documented한 fix), lib/api.ts BASE_URL을 \"/api\" 상대경로로 1줄 변경 — npm run build 성공 + .next/standalone/server.js 존재 확인, Vitest 13개 회귀 없음, docker build 성공(190MB), 컨테이너 :3001 부팅 후 curl 200 응답 확인",
+      "completed_at": "2026-05-14T15:11:01+0900"
+    },
+    {
+      "step": 2,
+      "name": "prod-compose-nginx",
+      "status": "completed",
+      "started_at": "2026-05-14T15:11:01+0900",
+      "summary": "docker-compose.prod.yml(postgres+backend+frontend+nginx 4서비스, internal 네트워크, nginx만 80 노출, ${VAR} placeholder만 사용, /opt/harness/logs 바인드 마운트, postgres healthcheck $$escape), nginx/conf.d/default.conf(listen 80, /api/ → backend:8080 prefix 보존 — trailing slash 없음, client_max_body_size 10M, X-Forwarded-Proto $scheme, WebSocket Upgrade 헤더), .env.example(POSTGRES/GEMINI/JWT placeholder), .gitignore에 .env 추가 — 로컬 시뮬레이션(임시 override+.env.local-test)으로 compose config syntax 통과 + 4 컨테이너 기동(postgres healthy, frontend/nginx running, backend는 빈 DB+validate로 restarting=의도된 실패) + curl / 200 + curl /api/auth/me 502(nginx→backend 도달, 404 아님 확인 = prefix 보존 정상) + down -v 정리 + 임시 파일 전부 삭제 + git check-ignore .env 성공",
+      "completed_at": "2026-05-14T15:15:23+0900"
+    },
+    {
+      "step": 3,
+      "name": "ci-deploy-and-manual",
+      "status": "completed",
+      "started_at": "2026-05-14T15:15:24+0900",
+      "summary": ".github/workflows/deploy.yml(main push + workflow_dispatch 트리거, build-backend/build-frontend 병렬 GHCR push with type=gha 캐시, deploy job appleboy/ssh-action@v1.2.0로 미니PC SSH 접속 후 git pull && docker compose pull && up -d && image prune -f), docs/DEPLOYMENT.md(A~G 7개 섹션 — A는 머지 완료 안내, B 미니PC Docker 설치+SSH 키+/.env, C GitHub Secrets+권한, D pg_dump→scp→pg_restore→검증, E 첫 푸시+GHCR public/PAT, F Cloudflare DNS+브라우저 e2e+로그 확인, G 일반/수동/롤백/자주쓰는명령/문제해결 + 시크릿 회전 절차 + 후속 권장사항) — python3 yaml.safe_load 통과, AC 전체 통과(appleboy/ssh-action 1회, ghcr.io 3회, build-backend/build-frontend/deploy 모두 존재, A~G 7개 섹션 모두 존재), permissions: packages:write가 build job 2개에만 부여되어 deploy job은 최소 권한 원칙 준수, 시크릿 평문 없음(${{ secrets.* }} 사용), 도메인/IP는 <...> placeholder로 처리",
+      "completed_at": "2026-05-14T15:18:35+0900"
+    }
+  ],
+  "created_at": "2026-05-14T15:02:43+0900",
+  "completed_at": "2026-05-14T15:18:35+0900"
+}
