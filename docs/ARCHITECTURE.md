@@ -3,13 +3,22 @@
 ## 디렉토리 구조
 ```
 harness_framework/
-├── docker-compose.yml          # PostgreSQL 16
+├── docker-compose.yml          # 개발용: PostgreSQL 16
+├── docker-compose.prod.yml     # 운영용: postgres + backend + frontend + nginx 4 서비스
+├── .env.example                # 운영 시크릿 템플릿 (실제 .env는 미니PC에만 존재)
+├── nginx/
+│   └── conf.d/default.conf     # 리버스 프록시: /api/* → backend, / → frontend
+├── .github/workflows/
+│   └── deploy.yml              # main push → GHCR 빌드 + SSH 배포
 ├── backend/                    # Spring Boot + JPA
+│   ├── Dockerfile              # multi-stage: gradle 빌더 + JRE 런타임
+│   ├── .dockerignore
 │   └── src/main/
 │       ├── resources/
 │       │   ├── application.yml
 │       │   ├── application-local.yml
-│       │   └── logback-spring.xml  # 프로파일별 로깅 설정 (local/prod/default)
+│       │   ├── application-prod.yml   # 운영 profile (환경변수만 받음, 기본값 없음)
+│       │   └── logback-spring.xml     # 프로파일별 로깅 설정 (local/prod/default)
 │       └── java/com/english/
 │           ├── auth/               # 인증 (회원가입/로그인/JWT)
 │           ├── word/               # 단어 CRUD + Gemini 보강
@@ -21,6 +30,9 @@ harness_framework/
 │           ├── setting/            # 사용자 설정
 │           └── config/             # SecurityConfig, GlobalExceptionHandler, MdcLoggingFilter
 ├── frontend/                   # Next.js (App Router)
+│   ├── Dockerfile              # multi-stage: deps → builder → runner (Next standalone)
+│   ├── .dockerignore
+│   ├── next.config.ts          # output: "standalone"
 │   └── app/
 │       ├── page.tsx            # 홈 대시보드
 │       ├── login/              # 로그인 페이지
@@ -33,11 +45,11 @@ harness_framework/
 │       ├── settings/           # 설정
 │       ├── components/         # 공통 컴포넌트 (AuthGuard, CremaLoader, CoffeeSpinner 포함)
 │       └── lib/
-│           ├── api.ts          # 백엔드 API 호출 (credentials: include)
+│           ├── api.ts          # 백엔드 API 호출 (BASE_URL="/api" 상대경로, credentials: include)
 │           ├── auth-context.tsx # 인증 상태 Context (AuthProvider, useAuth)
 │           └── saved-email.ts  # 이메일 저장 localStorage 헬퍼
 ├── design/                     # 디자인 목업 (JSX + HTML)
-├── docs/                       # 프로젝트 문서
+├── docs/                       # 프로젝트 문서 (DEPLOYMENT.md 포함)
 ├── phases/                     # harness 실행 메타데이터
 └── harness/                    # harness 프레임워크
 ```
@@ -130,7 +142,7 @@ logback-spring.xml (프로파일별 통합 관리)
 # 환경 변수 (backend 실행 전 필수)
 GEMINI_API_KEY=your-api-key-here
 
-# backend/src/main/resources/application.yml
+# backend/src/main/resources/application.yml (개발 공통)
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/english_app
@@ -138,7 +150,7 @@ spring:
     password: app1234
   jpa:
     hibernate:
-      ddl-auto: update    # 개발: Entity 기반 자동 스키마 생성
+      ddl-auto: validate    # 개발: Entity 기반 자동 스키마 검증
     # show-sql 제거: logback의 org.hibernate.SQL 로거로 대체
 
 gemini:
@@ -146,13 +158,111 @@ gemini:
 
 # JWT (SecurityConfig에서 관리)
 jwt:
-  secret: ${JWT_SECRET:dev-secret-key-minimum-32-characters}
+  secret: ${JWT_SECRET:dev-secret-key-that-is-at-least-32-characters-long}
   expiration: 604800000  # 7일
 
 # CORS (SecurityConfig에서 관리, CorsConfig.java → 흡수)
 허용 origin: http://localhost:3000
 허용 methods: GET, POST, PUT, PATCH, DELETE
 allowCredentials: true  # HttpOnly Cookie 전송 필수
+
+# backend/src/main/resources/application-prod.yml (운영 profile, 환경변수만 받음)
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}             # jdbc:postgresql://postgres:5432/english_app
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+server:
+  forward-headers-strategy: framework         # Nginx X-Forwarded-* 신뢰 (HTTPS 인식)
+  tomcat:
+    remoteip:
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+jwt:
+  secret: ${JWT_SECRET}                       # 기본값 없음 (fail-fast)
+  expiration: 604800000
+```
+
+## 배포 토폴로지 (운영)
+```
+[사용자 브라우저]
+  │ HTTPS
+  ▼
+[Cloudflare Proxy] — Flexible SSL 모드 (브라우저↔CF: HTTPS, CF↔origin: HTTP)
+  │ HTTP, X-Forwarded-Proto: https
+  ▼
+[공유기 80 포트포워딩]
+  │
+  ▼
+[미니PC: docker-compose.prod.yml]
+  ┌─────────────────────────────────────────────────────────────┐
+  │ network: internal (도커 브리지)                              │
+  │                                                             │
+  │  nginx:80 (외부 노출)                                       │
+  │    ├─ location /api/  → proxy_pass http://backend:8080;     │
+  │    └─ location /      → proxy_pass http://frontend:3000;    │
+  │                                                             │
+  │  backend (Spring Boot, SPRING_PROFILES_ACTIVE=prod)         │
+  │    └─ /opt/harness/logs:/app/logs (호스트 바인드 마운트)     │
+  │                                                             │
+  │  frontend (Next.js standalone, NODE_ENV=production)         │
+  │                                                             │
+  │  postgres (PostgreSQL 16, pgdata named volume)              │
+  │    └─ healthcheck: pg_isready                               │
+  └─────────────────────────────────────────────────────────────┘
+       ▲
+       │ docker login + pull
+       ▼
+  ghcr.io/ha9011/harness_framework-{backend,frontend}:latest|<sha>
+```
+
+## CI/CD 흐름 (GitHub Actions)
+```
+[개발자] git push origin main
+  │
+  ▼
+[GitHub Actions: .github/workflows/deploy.yml]
+  │
+  ├─ job: build-backend (병렬)
+  │    docker buildx build → push GHCR :latest + :<sha>
+  │    cache: type=gha, scope=backend
+  │
+  ├─ job: build-frontend (병렬)
+  │    docker buildx build → push GHCR :latest + :<sha>
+  │    cache: type=gha, scope=frontend
+  │
+  └─ job: deploy (needs: [build-backend, build-frontend])
+       appleboy/ssh-action: secrets {SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, SSH_PORT}
+       script:
+         cd /opt/harness
+         git pull --ff-only
+         docker compose -f docker-compose.prod.yml pull
+         docker compose -f docker-compose.prod.yml up -d
+         docker image prune -f
+```
+
+## 운영 시크릿
+```
+미니PC /opt/harness/.env (chmod 600, gitignore)
+├── POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD   # 새로 생성 (openssl rand)
+├── GEMINI_API_KEY                                    # 운영용 신규 발급
+├── GEMINI_MODEL=gemini-2.5-flash
+└── JWT_SECRET                                        # 새로 생성 (openssl rand)
+
+GitHub Repository Secrets
+├── SSH_HOST       # 미니PC 공인 IP 또는 도메인
+├── SSH_USER       # 미니PC 로그인 사용자
+├── SSH_PORT       # 22 (또는 변경한 포트)
+└── SSH_PRIVATE_KEY  # ~/.ssh/gha_deploy 개인키 전체
+
+GHCR 인증
+└── 패키지 가시성 public 권장 (또는 미니PC에서 PAT로 docker login ghcr.io)
 ```
 
 ## 데이터 모델 (13개 테이블)
