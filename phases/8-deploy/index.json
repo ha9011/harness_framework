@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "prod-compose-nginx",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-05-14T15:11:01+0900",
+      "summary": "docker-compose.prod.yml(postgres+backend+frontend+nginx 4서비스, internal 네트워크, nginx만 80 노출, ${VAR} placeholder만 사용, /opt/harness/logs 바인드 마운트, postgres healthcheck $$escape), nginx/conf.d/default.conf(listen 80, /api/ → backend:8080 prefix 보존 — trailing slash 없음, client_max_body_size 10M, X-Forwarded-Proto $scheme, WebSocket Upgrade 헤더), .env.example(POSTGRES/GEMINI/JWT placeholder), .gitignore에 .env 추가 — 로컬 시뮬레이션(임시 override+.env.local-test)으로 compose config syntax 통과 + 4 컨테이너 기동(postgres healthy, frontend/nginx running, backend는 빈 DB+validate로 restarting=의도된 실패) + curl / 200 + curl /api/auth/me 502(nginx→backend 도달, 404 아님 확인 = prefix 보존 정상) + down -v 정리 + 임시 파일 전부 삭제 + git check-ignore .env 성공",
+      "completed_at": "2026-05-14T15:15:23+0900"
     },
     {
       "step": 3,
