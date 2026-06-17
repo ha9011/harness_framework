@@ -1,4 +1,12 @@
+import { getToken, clearToken } from "@/lib/auth-token";
+
 const BASE_URL = "/api";
+
+// localStorage에 토큰이 있으면 Authorization 헤더로 반환 (PWA 폴백, ADR-020)
+function authHeader(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 interface ErrorResponse {
   code: string;
@@ -22,14 +30,18 @@ async function request<T>(
 ): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     credentials: "include",
+    ...options,
     headers: {
       "Content-Type": "application/json",
+      ...authHeader(),
+      ...options?.headers,
     },
-    ...options,
   });
 
   if (!res.ok) {
     if (res.status === 401) {
+      // 만료/무효 토큰이 매 요청 재전송되는 루프 방지 (ADR-020)
+      clearToken();
       if (!path.includes('/auth/me')) {
         window.dispatchEvent(new Event('unauthorized'));
       }
@@ -67,11 +79,16 @@ async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     credentials: "include",
+    headers: {
+      ...authHeader(),
+    },
     body: formData,
   });
 
   if (!res.ok) {
     if (res.status === 401) {
+      // 만료/무효 토큰이 매 요청 재전송되는 루프 방지 (ADR-020)
+      clearToken();
       window.dispatchEvent(new Event('unauthorized'));
       throw new ApiError('UNAUTHORIZED', '인증이 필요합니다', 401);
     }
