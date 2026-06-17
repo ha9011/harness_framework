@@ -1,6 +1,7 @@
 package com.english.integration;
 
 import com.english.auth.AuthResponse;
+import com.english.auth.AuthTokenResponse;
 import com.english.auth.LoginRequest;
 import com.english.auth.SignupRequest;
 import com.english.config.ErrorResponse;
@@ -84,6 +85,41 @@ class AuthIntegrationTest extends IntegrationTestBase {
                 new HttpEntity<>(new HttpHeaders()), ErrorResponse.class);
 
         assertThat(meAfterLogout.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("PWA 하이브리드 인증: 로그인 응답 body의 token으로(쿠키 없이) Bearer 헤더 me 조회 200")
+    void bearerHeaderAuth_withoutCookie_returns200() {
+        // 1. 회원가입 → 응답 body에 token 포함 확인
+        ResponseEntity<AuthTokenResponse> signupRes = restTemplate.postForEntity(
+                "/api/auth/signup",
+                new SignupRequest("pwa@test.com", "password123", "PWA유저"),
+                AuthTokenResponse.class);
+
+        assertThat(signupRes.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(signupRes.getBody().getToken()).isNotBlank();
+
+        // 2. 로그인 → 응답 body의 token 추출
+        ResponseEntity<AuthTokenResponse> loginRes = restTemplate.postForEntity(
+                "/api/auth/login",
+                new LoginRequest("pwa@test.com", "password123"),
+                AuthTokenResponse.class);
+
+        assertThat(loginRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(loginRes.getBody().getToken()).isNotBlank();
+        String token = loginRes.getBody().getToken();
+
+        // 3. 쿠키 없이 Authorization: Bearer 헤더만으로 me 조회 → 200
+        HttpHeaders bearerHeaders = new HttpHeaders();
+        bearerHeaders.setBearerAuth(token);
+
+        ResponseEntity<AuthResponse> meRes = restTemplate.exchange(
+                "/api/auth/me", HttpMethod.GET,
+                new HttpEntity<>(bearerHeaders), AuthResponse.class);
+
+        assertThat(meRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(meRes.getBody().getEmail()).isEqualTo("pwa@test.com");
+        assertThat(meRes.getBody().getNickname()).isEqualTo("PWA유저");
     }
 
     @Test

@@ -162,6 +162,65 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/auth/login 성공 - 응답 body에 token 포함 (PWA localStorage용, ADR-020)")
+    void login_response_includes_token() throws Exception {
+        // given
+        LoginRequest request = new LoginRequest("test@email.com", "password123");
+        AuthResponse response = new AuthResponse(1L, "test@email.com", "테스터");
+        LoginResult loginResult = new LoginResult("jwt-token", response);
+        given(authService.login(any(LoginRequest.class))).willReturn(loginResult);
+
+        // when & then
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.email").value("test@email.com"))
+                .andExpect(jsonPath("$.nickname").value("테스터"));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/signup 성공 - 응답 body에 token 포함 (PWA localStorage용, ADR-020)")
+    void signup_response_includes_token() throws Exception {
+        // given
+        SignupRequest request = new SignupRequest("test@email.com", "password123", "테스터");
+        AuthResponse response = new AuthResponse(1L, "test@email.com", "테스터");
+        LoginResult loginResult = new LoginResult("jwt-token", response);
+        given(authService.signup(any(SignupRequest.class))).willReturn(response);
+        given(authService.login(any(LoginRequest.class))).willReturn(loginResult);
+
+        // when & then
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.email").value("test@email.com"))
+                .andExpect(jsonPath("$.nickname").value("테스터"));
+    }
+
+    @Test
+    @DisplayName("GET /api/auth/me 성공 - Authorization Bearer 헤더(쿠키 없음)로 200 (PWA 경로, ADR-020)")
+    void getMe_withBearerHeader_success() throws Exception {
+        // given
+        AuthResponse response = new AuthResponse(1L, "test@email.com", "테스터");
+        given(jwtProvider.validateToken("valid-token")).willReturn(true);
+        given(jwtProvider.getEmailFromToken("valid-token")).willReturn("test@email.com");
+        given(authService.getMe("test@email.com")).willReturn(response);
+
+        // when & then - 쿠키 없이 Authorization 헤더만으로 인증
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer valid-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.email").value("test@email.com"))
+                .andExpect(jsonPath("$.nickname").value("테스터"));
+    }
+
+    @Test
     @DisplayName("POST /api/auth/login - cookieSecure 기본(false)이면 Set-Cookie에 Secure 미포함")
     void login_cookie_not_secure_by_default() throws Exception {
         // given - cookieSecure는 세팅하지 않으므로 boolean 기본값 false

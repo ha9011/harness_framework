@@ -109,6 +109,28 @@
 - **테스트 영향**: 기존 AuthControllerTest/AuthIntegrationTest는 Set-Cookie의 `Max-Age=604800`/`Max-Age=0`만 `containsString`으로 단언 → Secure 추가로 깨지지 않음. 신규: `app.cookie.secure=true`일 때 Set-Cookie에 `Secure` 포함을 단언하는 테스트 추가. 프론트 입력 폰트/viewport는 시각적 변경이라 단위테스트 대신 빌드/수동 확인
 - **범위**: 백엔드 AuthController 쿠키 생성 + application-prod.yml/application-local.yml 설정. 프론트 globals.css(모바일 input 폰트) + layout.tsx(viewport export). 그 외 인증 로직/JWT 만료(7일)는 변경 없음
 
+### 기능 15: iOS 홈화면 PWA 로그인 유지 — 하이브리드 인증 (Phase 10-pwa-auth)
+- **배경**: 홈 화면에 추가한 standalone PWA에서 로그인 후 앱을 강제 종료하면 로그아웃됨. iOS standalone 웹앱은 Safari와 분리된 쿠키 저장소를 쓰며 종료 시 쿠키(영구 쿠키 포함)를 폐기 → `GET /api/auth/me`가 쿠키 없이 호출되어 401. **Safari 직접 접속은 정상**(Max-Age 7일 영구 쿠키 유지 확인됨). Phase 9의 쿠키 `Secure` 수정과 무관한 별개 원인으로 실사용자 재현·확정됨
+- **해결 (하이브리드 인증)**: 쿠키는 그대로 유지(Safari·데스크톱 보안 유지)하고, JWT 토큰을 **localStorage에도 저장 + `Authorization: Bearer` 헤더로 전송**하는 경로를 추가. PWA가 쿠키를 폐기해도 localStorage는 유지되어 세션 복원 가능
+- **백엔드**:
+  - `JwtAuthenticationFilter`: 토큰을 `Authorization: Bearer` 헤더에서 먼저 추출, 없으면 기존 쿠키에서 추출 (둘 다 동일 JWT 검증 경로). 대시보드/단어 등 보호 엔드포인트는 이 필터를 거치므로 헤더 변경만으로 커버됨
+  - `GET /api/auth/me`: **현재 `@CookieValue`로 쿠키만 직접 읽음**(필터 미경유) → 헤더(Bearer)도 허용하도록 변경(또는 SecurityContext 경유로 리팩터링). **이걸 빼면 PWA에서 /auth/me가 계속 401** ← 핵심 누락 주의
+  - 로그인/회원가입 응답 body에 JWT 토큰 포함(프론트가 localStorage에 저장하도록). `AuthResponse`는 /auth/me와 공용 + 다수 테스트가 `@AllArgsConstructor` 3-arg 생성자를 사용 → **필드 추가로 깨지지 않도록 로그인/회원가입 전용 응답 DTO 신설** 권장(AuthResponse 미변경)
+  - 쿠키 발급은 그대로 유지(HttpOnly/Secure/SameSite/Path/Max-Age 불변)
+- **프론트엔드**:
+  - localStorage 토큰 헬퍼 신설(`lib/auth-token.ts` — `saved-email.ts`와 동형, `typeof window` SSR 가드)
+  - 로그인/회원가입 성공 시 응답의 토큰을 localStorage에 저장
+  - `lib/api.ts`: localStorage에 토큰이 있으면 `Authorization: Bearer` 헤더 첨부(기존 `credentials: "include"` 유지). `request`/`uploadRequest` 양쪽 적용
+  - 로그아웃 시 localStorage 토큰 삭제(+ 기존 `/auth/logout` 쿠키 삭제). 401 'unauthorized' 처리에서도 토큰 삭제(만료 토큰 루프 방지)
+- **보안 트레이드오프(ADR-020)**: 토큰이 JS로 읽히는 localStorage에 존재 → XSS 시 탈취 가능. ADR-007이 HttpOnly 쿠키를 택한 이유와 상충하나, (1) iOS PWA는 쿠키로 해결 불가, (2) ADR-007도 "개인 학습 앱이므로 7일 토큰 리스크 허용 가능"이라 명시, (3) 쿠키를 1차 경로로 유지(브라우저는 HttpOnly 보호 유지), localStorage는 PWA 폴백 → 수용
+- **엣지케이스**:
+  - 로그아웃이 localStorage 토큰을 안 지우면 PWA가 계속 로그인 상태 → 반드시 쿠키+localStorage 둘 다 삭제
+  - 토큰 만료(7일) → /auth/me 401 → 프론트가 localStorage 토큰 삭제 + 로그인 리다이렉트(기존 unauthorized 흐름 확장)
+  - 헤더+쿠키 동시 존재(수정 후 Safari) → 백엔드 헤더 우선, 같은 토큰이라 무해
+  - CORS: 운영은 same-origin(nginx `/api`)이라 preflight 없음. 혹시 cross-origin이면 `Authorization` 허용 헤더 설정 필요(SecurityConfig CORS 확인)
+- **테스트 영향**: 기존 쿠키 인증 테스트 유지(쿠키 계속 발급). 전용 DTO 사용으로 `AuthResponse` 3-arg 생성자 사용처 비파괴. 신규: (a) Authorization 헤더만으로(쿠키 없이) 보호 엔드포인트 200 — AuthIntegrationTest, (b) 로그인/회원가입 응답 body에 토큰 포함, (c) /auth/me 헤더 인증
+- **범위 제외**: Refresh Token, 토큰 회전, 서비스워커/오프라인 캐시, manifest.json 보강(있으면 유지)은 후속 Phase
+
 ### MVP 제외 사항 (다음 Phase 후보)
 - 닉네임/비밀번호 변경
 - HTTPS Full(strict) 전환 또는 Cloudflare Tunnel (운영 보안 강화)
