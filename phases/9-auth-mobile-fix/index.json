@@ -1,0 +1,20 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "9-auth-mobile-fix",
+  "steps": [
+    {
+      "step": 0,
+      "name": "auth-cookie-secure",
+      "status": "completed",
+      "started_at": "2026-06-17T14:04:07+0900",
+      "summary": "AuthController에 @Value(app.cookie.secure:false) 주입 + createTokenCookie에 .secure(cookieSecure) 추가, application-prod.yml에 app.cookie.secure=true 추가, AuthControllerTest에 Secure 분기 테스트 3개 추가(false 미포함/login·signup true 포함, ReflectionTestUtils 사용). 전체 테스트 green",
+      "completed_at": "2026-06-17T14:06:26+0900"
+    },
+    {
+      "step": 1,
+      "name": "mobile-input-zoom",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-06-17T14:04:07+0900"
+}
