@@ -1,0 +1,20 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "10-pwa-auth",
+  "steps": [
+    {
+      "step": 0,
+      "name": "bearer-header-auth",
+      "status": "completed",
+      "started_at": "2026-06-17T15:48:03+0900",
+      "summary": "신규 AuthTokenResponse DTO(id/email/nickname/token)로 로그인·회원가입 응답에 token 노출(AuthResponse 미변경, 쿠키 발급 유지). JwtAuthenticationFilter·AuthController.getMe가 Authorization Bearer 헤더 우선·쿠키 폴백 수용. AuthIntegrationTest에 쿠키 없이 Bearer 헤더만으로 /api/auth/me 200 + token body 단언 신규 추가, AuthControllerTest에 login/signup token body·getMe Bearer 헤더 신규 추가. test+integrationTest 전체 green(회귀 없음). 참고: 통합 테스트는 @Tag(integration)이라 'test'가 제외 → AC의 'gradlew test --tests AuthIntegrationTest'는 0건 매칭, 'gradlew integrationTest'로 실행함.",
+      "completed_at": "2026-06-17T15:53:57+0900"
+    },
+    {
+      "step": 1,
+      "name": "pwa-token-storage",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-06-17T15:48:03+0900"
+}
