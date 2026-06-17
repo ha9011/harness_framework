@@ -74,4 +74,7 @@ jobs:
             git pull --ff-only
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
+            # backend/frontend 컨테이너가 재생성되면 IP가 바뀌는데, nginx는 시작 시 upstream IP를
+            # 캐싱하므로 죽은 IP를 물고 502가 난다. 매 배포마다 nginx를 재시작해 IP를 다시 resolve한다.
+            docker compose -f docker-compose.prod.yml restart nginx
             docker image prune -f
