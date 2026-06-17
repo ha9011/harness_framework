@@ -53,3 +53,12 @@ body {
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* iOS Safari 입력 포커스 자동 줌 방지: 모바일(터치) 환경에서 form control 16px 보장 (ADR-019) */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
