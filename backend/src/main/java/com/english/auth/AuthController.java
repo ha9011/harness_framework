@@ -3,6 +3,7 @@ package com.english.auth;
 import com.english.config.AuthenticationException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -16,6 +17,11 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtProvider jwtProvider;
+
+    // 쿠키 Secure 여부는 profile 설정값으로 명시 제어 (prod=true, local/default/test=false).
+    // Cloudflare Flexible은 CF↔origin이 HTTP라 request.isSecure() 자동판단 불가 → 설정값 분기 (ADR-018)
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
 
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> signup(@RequestBody @Valid SignupRequest request) {
@@ -68,6 +74,7 @@ public class AuthController {
                 .httpOnly(true)
                 .path("/api")
                 .sameSite("Lax")
+                .secure(cookieSecure)
                 .maxAge(maxAge)
                 .build();
     }

@@ -18,3 +18,5 @@ application-local.yml
 # phase execution outputs
 phases/**/phase*-output.json
 phases/**/step*-output.json
+
+english_app.dump

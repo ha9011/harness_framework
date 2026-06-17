@@ -24,3 +24,8 @@ gemini:
 jwt:
   secret: ${JWT_SECRET}
   expiration: 604800000
+
+# 운영은 HTTPS(Cloudflare)이므로 JWT 쿠키에 Secure 부여 (ADR-018)
+app:
+  cookie:
+    secure: true

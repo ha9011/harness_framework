@@ -44,6 +44,10 @@
       "dir": "8-deploy",
       "status": "completed",
       "completed_at": "2026-05-14T15:18:35+0900"
+    },
+    {
+      "dir": "9-auth-mobile-fix",
+      "status": "pending"
     }
   ]
 }
