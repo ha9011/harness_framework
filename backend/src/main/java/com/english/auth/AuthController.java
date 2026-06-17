@@ -24,7 +24,7 @@ public class AuthController {
     private boolean cookieSecure;
 
     @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signup(@RequestBody @Valid SignupRequest request) {
+    public ResponseEntity<AuthTokenResponse> signup(@RequestBody @Valid SignupRequest request) {
         AuthResponse response = authService.signup(request);
 
         // 가입 즉시 자동 로그인
@@ -33,20 +33,22 @@ public class AuthController {
 
         ResponseCookie cookie = createTokenCookie(loginResult.getToken(), 604800);
 
+        // 쿠키 발급은 그대로 유지하고, body에 token을 추가 노출 (PWA localStorage 저장용, ADR-020)
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(response);
+                .body(AuthTokenResponse.of(response, loginResult.getToken()));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request) {
+    public ResponseEntity<AuthTokenResponse> login(@RequestBody @Valid LoginRequest request) {
         LoginResult result = authService.login(request);
 
         ResponseCookie cookie = createTokenCookie(result.getToken(), 604800);
 
+        // 쿠키 발급은 그대로 유지하고, body에 token을 추가 노출 (PWA localStorage 저장용, ADR-020)
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(result.getAuthResponse());
+                .body(AuthTokenResponse.of(result.getAuthResponse(), result.getToken()));
     }
 
     @PostMapping("/logout")
@@ -59,7 +61,11 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<AuthResponse> getMe(@CookieValue(name = "token", required = false) String token) {
+    public ResponseEntity<AuthResponse> getMe(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @CookieValue(name = "token", required = false) String cookieToken) {
+        // Authorization Bearer 헤더 우선, 없으면 쿠키 (PWA는 쿠키를 폐기하므로 헤더 수용 필수, ADR-020)
+        String token = resolveToken(authHeader, cookieToken);
         if (token == null || !jwtProvider.validateToken(token)) {
             throw new AuthenticationException("인증이 필요합니다");
         }
@@ -67,6 +73,13 @@ public class AuthController {
         String email = jwtProvider.getEmailFromToken(token);
         AuthResponse response = authService.getMe(email);
         return ResponseEntity.ok(response);
+    }
+
+    private String resolveToken(String authHeader, String cookieToken) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring("Bearer ".length());
+        }
+        return cookieToken;
     }
 
     private ResponseCookie createTokenCookie(String token, long maxAge) {

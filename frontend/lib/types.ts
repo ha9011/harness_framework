@@ -4,6 +4,11 @@ export interface AuthUser {
   nickname: string;
 }
 
+// 로그인/회원가입 응답: 사용자 정보 + JWT 토큰 (localStorage 저장용, ADR-020)
+export interface AuthLoginResponse extends AuthUser {
+  token: string;
+}
+
 export interface WordResponse {
   id: number;
   word: string;

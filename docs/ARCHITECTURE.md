@@ -101,11 +101,14 @@ POST /api/auth/signup or /api/auth/login
      · Cloudflare Flexible(CF↔origin HTTP)이라 request.isSecure() 자동판단 불가 → profile 설정으로 명시 (ADR-018)
 
 [인증된 요청]
-GET/POST /api/** (Cookie 자동 전송)
+GET/POST /api/** (Cookie 자동 전송 또는 Authorization: Bearer 헤더)
   → MdcLoggingFilter: traceId 세팅 + 요청 시작 로그
-  → JwtAuthenticationFilter: Cookie에서 token 추출 → JWT 검증 → SecurityContext 설정
+  → JwtAuthenticationFilter: Authorization 헤더(Bearer) 우선, 없으면 Cookie에서 token 추출 → JWT 검증 → SecurityContext 설정
   → Controller 진입
   ← MdcLoggingFilter: 응답 완료 로그 (status + 처리시간) + MDC.clear()
+※ 하이브리드 인증 (ADR-020, 기능 15): iOS 홈화면 PWA는 쿠키를 폐기하므로 토큰을 localStorage에도
+  저장하고 Authorization 헤더로 전송. 로그인/회원가입 응답 body에 token 포함(프론트가 저장).
+  /api/auth/me는 @CookieValue로 쿠키를 직접 읽으므로(필터 미경유) 헤더도 수용하도록 변경 필수.
 
 [미인증 요청]
 GET/POST /api/** (Cookie 없음)
@@ -349,10 +352,11 @@ GlobalExceptionHandler (로깅 레벨):
 ## 상태 관리
 - **서버 상태**: Spring Boot + JPA (PostgreSQL). 모든 비즈니스 데이터는 DB에 저장
 - **인증 상태**: React Context (AuthProvider) → useAuth() hook
-  - 초기 로딩 시 GET /api/auth/me로 인증 상태 확인 (Cookie 자동 전송)
+  - 초기 로딩 시 GET /api/auth/me로 인증 상태 확인 (Cookie 자동 전송 또는 Authorization 헤더)
   - user: { id, email, nickname } | null
   - AuthGuard: user가 null이면 /login으로 리다이렉트
 - **클라이언트 상태**: React useState/useReducer
   - 카드 플립 상태, 탭 선택, 폼 입력 등 UI 상태만 클라이언트에서 관리
   - "처음부터 다시" 복습 시 기존 카드 데이터를 클라이언트에서 재사용 (API 재호출 X)
 - **localStorage**: 이메일 저장 (saved-email.ts 헬퍼). 로그인 페이지에서 체크박스로 제어
+  - **JWT 토큰 저장** (auth-token.ts 헬퍼, 기능 15/ADR-020) — iOS 홈화면 PWA 세션 유지용. 쿠키가 1차 경로, localStorage 토큰은 Authorization 헤더로 보내는 PWA 폴백. 로그아웃·401 시 반드시 제거

@@ -23,7 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String token = extractTokenFromCookies(request);
+        String token = extractToken(request);
 
         if (token != null && !token.isBlank() && jwtProvider.validateToken(token)) {
             String email = jwtProvider.getEmailFromToken(token);
@@ -35,6 +35,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    // 토큰 추출: Authorization Bearer 헤더 우선, 없으면 쿠키 (PWA 폴백, ADR-020)
+    private String extractToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring("Bearer ".length());
+        }
+        return extractTokenFromCookies(request);
     }
 
     private String extractTokenFromCookies(HttpServletRequest request) {

@@ -3,7 +3,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { AuthUser } from "@/lib/types";
+import { setToken, clearToken } from "@/lib/auth-token";
+import type { AuthUser, AuthLoginResponse } from "@/lib/types";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleUnauthorized = () => {
+      clearToken();
       setUser(null);
       router.push("/login");
     };
@@ -38,17 +40,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const data = await api.post<AuthUser>("/auth/login", { email, password });
-    setUser(data);
+    const data = await api.post<AuthLoginResponse>("/auth/login", { email, password });
+    setToken(data.token);
+    setUser({ id: data.id, email: data.email, nickname: data.nickname });
   }, []);
 
   const signup = useCallback(async (email: string, password: string, nickname: string) => {
-    const data = await api.post<AuthUser>("/auth/signup", { email, password, nickname });
-    setUser(data);
+    const data = await api.post<AuthLoginResponse>("/auth/signup", { email, password, nickname });
+    setToken(data.token);
+    setUser({ id: data.id, email: data.email, nickname: data.nickname });
   }, []);
 
   const logout = useCallback(async () => {
     await api.post("/auth/logout");
+    clearToken();
     setUser(null);
     router.push("/login");
   }, [router]);
