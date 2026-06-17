@@ -65,6 +65,7 @@ harness_framework/
   - API 호출: lib/api.ts에서 fetch 래핑 (credentials: "include"로 Cookie 자동 전송)
   - 인증 상태: React Context (AuthProvider) → useAuth() hook으로 접근
   - 라우트 보호: AuthGuard 컴포넌트 — 미로그인 시 /login으로 리다이렉트
+  - 모바일 뷰포트: globals.css에서 form control(input/textarea/select)을 모바일에서 16px 이상으로 강제 → iOS Safari 포커스 자동 줌 방지 (ADR-019). 단 Tailwind 유틸(`text-sm`)을 덮으려면 `!important`/높은 특이성 필요. layout.tsx의 `viewport` export(`width=device-width, initial-scale=1`)는 기본값과 동일한 명시용(선택)
 
 ## 데이터 흐름
 ```
@@ -95,7 +96,9 @@ UI 업데이트
 POST /api/auth/signup or /api/auth/login
   → AuthController → AuthService → UserRepository
   → JWT 생성 (JwtProvider)
-  ← Set-Cookie: token=<jwt>; HttpOnly; Path=/api; SameSite=Lax; Max-Age=604800
+  ← Set-Cookie: token=<jwt>; HttpOnly; Path=/api; SameSite=Lax; Max-Age=604800[; Secure]
+     · Secure는 app.cookie.secure 설정값으로 부여 (prod=true, local/default=false)
+     · Cloudflare Flexible(CF↔origin HTTP)이라 request.isSecure() 자동판단 불가 → profile 설정으로 명시 (ADR-018)
 
 [인증된 요청]
 GET/POST /api/** (Cookie 자동 전송)
@@ -187,6 +190,13 @@ gemini:
 jwt:
   secret: ${JWT_SECRET}                       # 기본값 없음 (fail-fast)
   expiration: 604800000
+
+# 쿠키 Secure 분기 (ADR-018)
+app:
+  cookie:
+    secure: true        # application-prod.yml: HTTPS 운영 → Secure 부여
+# application-local.yml / default: app.cookie.secure=false (로컬 HTTP 개발 — Secure면 쿠키 미전송으로 로그인 깨짐)
+# AuthController.createTokenCookie가 이 값을 읽어 .secure(...) 적용
 ```
 
 ## 배포 토폴로지 (운영)

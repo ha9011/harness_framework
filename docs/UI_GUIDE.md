@@ -164,6 +164,7 @@ coffee-spin 애니메이션으로 회전
 - 에러 상태: `border-warn` + `shadow-[0_0_0_3px_rgba(199,126,71,0.13)]` + `text-warn text-xs`
 - 제출 버튼: Primary 버튼 lg (`bg-primary text-white rounded-[14px] h-[48px] text-[15px]`)
 - 소셜 로그인 (Google/카카오): 이번 Phase 미구현, 향후 추가 가능
+- **모바일 입력 줌 방지 (iOS)**: input/textarea/select는 모바일에서 **16px 이상** 폰트로 렌더링해야 한다. 16px 미만(예: `text-sm`=14px)이면 iOS Safari가 포커스 시 자동 줌인하고, 그 줌이 다음 페이지(홈)까지 유지된다. 데스크톱 디자인 유지를 위해 미디어쿼리/coarse pointer 한정으로 globals.css 전역 적용. **주의**: element selector(`input`)는 Tailwind 유틸 `text-sm`을 특이성에서 못 이기므로 `!important` 또는 더 높은 특이성 필요. `user-scalable=no`/`maximum-scale=1`(핀치 줌 비활성화)은 접근성 위배라 **사용 금지** (ADR-019)
 
 ### 로그인 페이지 (/login)
 - 상단 일러스트: 창가 SVG (카페 분위기, 세이지 그린 나무 + 커피잔)

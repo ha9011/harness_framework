@@ -1,0 +1,24 @@
+{
+  "project": "영어 패턴 학습기 (Cozy Cafe)",
+  "phase": "9-auth-mobile-fix",
+  "steps": [
+    {
+      "step": 0,
+      "name": "auth-cookie-secure",
+      "status": "completed",
+      "started_at": "2026-06-17T14:04:07+0900",
+      "summary": "AuthController에 @Value(app.cookie.secure:false) 주입 + createTokenCookie에 .secure(cookieSecure) 추가, application-prod.yml에 app.cookie.secure=true 추가, AuthControllerTest에 Secure 분기 테스트 3개 추가(false 미포함/login·signup true 포함, ReflectionTestUtils 사용). 전체 테스트 green",
+      "completed_at": "2026-06-17T14:06:26+0900"
+    },
+    {
+      "step": 1,
+      "name": "mobile-input-zoom",
+      "status": "completed",
+      "started_at": "2026-06-17T14:06:27+0900",
+      "summary": "globals.css 끝에 @media (pointer: coarse) { input, textarea, select { font-size: 16px !important } } 규칙 추가 — iOS Safari 입력 포커스 자동 줌 방지(ADR-019). !important로 Tailwind text-sm 유틸 덮어씀, coarse pointer 한정으로 데스크톱 14px 디자인 보존. 개별 input className 미수정/layout.tsx viewport 미추가(Out of Scope 준수). npm run build·lint·test(13개) 모두 통과, grep coarse/16px 확인",
+      "completed_at": "2026-06-17T14:08:10+0900"
+    }
+  ],
+  "created_at": "2026-06-17T14:04:07+0900",
+  "completed_at": "2026-06-17T14:08:10+0900"
+}

@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -158,5 +159,62 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.email").value("test@email.com"))
                 .andExpect(jsonPath("$.nickname").value("테스터"));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/login - cookieSecure 기본(false)이면 Set-Cookie에 Secure 미포함")
+    void login_cookie_not_secure_by_default() throws Exception {
+        // given - cookieSecure는 세팅하지 않으므로 boolean 기본값 false
+        LoginRequest request = new LoginRequest("test@email.com", "password123");
+        AuthResponse response = new AuthResponse(1L, "test@email.com", "테스터");
+        LoginResult loginResult = new LoginResult("jwt-token", response);
+        given(authService.login(any(LoginRequest.class))).willReturn(loginResult);
+
+        // when & then
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie",
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Secure"))));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/login - cookieSecure=true이면 Set-Cookie에 Secure 포함")
+    void login_cookie_secure_when_enabled() throws Exception {
+        // given - prod profile처럼 cookieSecure=true 주입 (standalone Mockito라 @Value 미적용 → ReflectionTestUtils)
+        ReflectionTestUtils.setField(authController, "cookieSecure", true);
+        LoginRequest request = new LoginRequest("test@email.com", "password123");
+        AuthResponse response = new AuthResponse(1L, "test@email.com", "테스터");
+        LoginResult loginResult = new LoginResult("jwt-token", response);
+        given(authService.login(any(LoginRequest.class))).willReturn(loginResult);
+
+        // when & then
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie",
+                        org.hamcrest.Matchers.containsString("Secure")));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/signup - cookieSecure=true이면 Set-Cookie에 Secure 포함")
+    void signup_cookie_secure_when_enabled() throws Exception {
+        // given - prod profile처럼 cookieSecure=true 주입
+        ReflectionTestUtils.setField(authController, "cookieSecure", true);
+        SignupRequest request = new SignupRequest("test@email.com", "password123", "테스터");
+        AuthResponse response = new AuthResponse(1L, "test@email.com", "테스터");
+        LoginResult loginResult = new LoginResult("jwt-token", response);
+        given(authService.signup(any(SignupRequest.class))).willReturn(response);
+        given(authService.login(any(LoginRequest.class))).willReturn(loginResult);
+
+        // when & then
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Set-Cookie",
+                        org.hamcrest.Matchers.containsString("Secure")));
     }
 }

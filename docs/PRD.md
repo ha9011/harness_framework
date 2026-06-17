@@ -91,6 +91,24 @@
 - **로그아웃 버튼 (설정 페이지)**: 설정 카드 아래에 로그아웃 버튼 추가. Ghost 스타일, 텍스트 "로그아웃"
 - **Hydration 에러 수정**: layout.tsx의 `<body>`에 `suppressHydrationWarning` 추가. 브라우저 확장이 주입하는 속성으로 인한 hydration mismatch 경고 제거
 
+### 기능 14: 운영 로그인 세션 유지 + 모바일 입력 줌 수정 (Phase 9-auth-mobile-fix)
+- **배경**: 운영(HTTPS 도메인, iOS Safari) 환경에서 (1) 로그인 후 앱을 백그라운드로 보냈다 복귀하면 로그아웃되고, (2) 로그인 입력 필드에 포커스하면 화면이 줌인되어 메인페이지까지 확대 상태가 유지됨
+- **세션 유지 (쿠키 Secure)**:
+  - **원인 (유력, 운영 재현으로 검증 필요)**: JWT 쿠키가 `httpOnly` + `SameSite=Lax` + `Max-Age=604800`(7일)로 발급되나 `Secure` 속성이 없음. non-Secure 쿠키도 HTTPS에서 저장·전송 자체는 되지만, iOS Safari는 HTTPS 사이트의 non-Secure 쿠키를 백그라운드 복귀(탭 메모리 해제 후 재로드) 시 신뢰성 있게 유지하지 않는 사례가 많음 → 복귀 시 `GET /api/auth/me`가 쿠키 없이 호출되어 401 → 로그아웃. **정적 분석만으로 단일 확정 원인은 단언 불가**하나, `Secure`는 운영 HTTPS에서 어차피 적용해야 할 올바른 수정이므로 1순위로 적용 후 운영 iOS에서 재현·검증
+  - **해결**: 쿠키에 `Secure` 속성 추가. 단, Cloudflare Flexible SSL이라 origin(Spring)은 평문 HTTP로 요청을 받으므로 요청 scheme로 자동 판단하지 않고 **profile 설정값으로 명시 제어** (`app.cookie.secure`: prod=true, local/default=false). 로컬 HTTP 개발(localhost)은 Secure=false 유지하여 정상 동작. set/clear 쿠키 모두 동일 헬퍼(`createTokenCookie`)를 사용하므로 로그아웃 쿠키도 같은 속성(prod에서 Secure 포함)으로 발급되어 정상 삭제됨
+  - **불변**: SameSite=Lax, Max-Age=7일, HttpOnly, Path=/api는 변경 없음. JWT 만료 정책(7일)도 변경 없음
+- **iOS 입력 줌 방지**:
+  - **원인**: 입력 필드 폰트가 `text-sm`(14px)로 16px 미만 → iOS Safari가 input 포커스 시 자동 줌인. 이 줌이 페이지 이동 후에도 유지되어 메인페이지가 확대되어 보임. 해당 input은 login/signup뿐 아니라 words/page, WordAddModal, PatternAddModal 등 **총 5개 파일**에 분포
+  - **해결**: 모바일(터치) 환경에서 form control(input/textarea/select) 폰트를 16px 이상으로 보장. 5개 파일을 개별 수정하는 대신 **globals.css 전역 규칙 1곳**으로 일괄 적용(미디어쿼리/coarse pointer 한정 → 데스크톱 디자인 보존). 접근성을 위해 `user-scalable=no`(핀치 줌 비활성화)는 사용하지 않음
+  - **⚠️ Tailwind 특이성 주의**: element selector `input`(특이성 0,0,1)은 Tailwind 유틸 클래스 `text-sm`(0,1,0)을 **이기지 못함** → 단순 `input { font-size: 16px }`는 무효. `@media (pointer: coarse) { input, textarea, select { font-size: 16px !important } }`처럼 **`!important`** 또는 더 높은 특이성으로 적용해야 실제로 덮어씀
+  - **viewport (선택)**: layout.tsx에 `width=device-width, initial-scale=1` viewport export를 명시 가능하나, Next.js 기본 viewport와 동일하여 **줌 해결의 핵심은 아님**(실제 수정은 16px 폰트). 명시적 선언 목적의 선택 작업
+- **엣지케이스**:
+  - 로컬 HTTP 개발에서 Secure=true면 쿠키 미전송 → 로그인 깨짐. 반드시 profile별로 분기(local/default=false)
+  - `user-scalable=no`/`maximum-scale=1`로 줌을 막는 방식은 접근성 위배 + iOS 일부 버전이 무시 → 채택 안 함. 16px 폰트 방식으로 해결
+  - 인앱 브라우저(카카오 등)/PWA standalone은 쿠키 유지 정책이 더 제한적일 수 있어 별도 확인 필요(범위 외)
+- **테스트 영향**: 기존 AuthControllerTest/AuthIntegrationTest는 Set-Cookie의 `Max-Age=604800`/`Max-Age=0`만 `containsString`으로 단언 → Secure 추가로 깨지지 않음. 신규: `app.cookie.secure=true`일 때 Set-Cookie에 `Secure` 포함을 단언하는 테스트 추가. 프론트 입력 폰트/viewport는 시각적 변경이라 단위테스트 대신 빌드/수동 확인
+- **범위**: 백엔드 AuthController 쿠키 생성 + application-prod.yml/application-local.yml 설정. 프론트 globals.css(모바일 input 폰트) + layout.tsx(viewport export). 그 외 인증 로직/JWT 만료(7일)는 변경 없음
+
 ### MVP 제외 사항 (다음 Phase 후보)
 - 닉네임/비밀번호 변경
 - HTTPS Full(strict) 전환 또는 Cloudflare Tunnel (운영 보안 강화)
